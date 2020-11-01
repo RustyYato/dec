@@ -13,7 +13,7 @@ impl<P: ParseOnce<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseOnce<I, E
         let len = input.len();
         let (input, output) = self.0.parse_once(input)?;
         let len = len - input.len();
-        let recognized = old_input.cut(len - input.len());
+        let recognized = old_input.cut(len);
         Ok((input, (recognized, output)))
     }
 }
