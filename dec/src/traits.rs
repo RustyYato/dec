@@ -9,7 +9,7 @@ pub trait ParseOnce<I, E: ParseError<I>> {
 
 impl<T: ?Sized> ParserRef for T {}
 pub trait ParserRef {
-    fn add_context(self, ctx: &'static str) -> crate::combinator::Context<Self>
+    fn with_context(self, ctx: &'static str) -> crate::combinator::Context<Self>
     where
         Self: Sized,
     {
