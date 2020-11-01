@@ -9,6 +9,13 @@ pub trait ParseOnce<I, E: ParseError<I>> {
 
 impl<T: ?Sized> ParserRef for T {}
 pub trait ParserRef {
+    fn add_context(self, ctx: &'static str) -> crate::combinator::Context<Self>
+    where
+        Self: Sized,
+    {
+        crate::combinator::Context(self, ctx)
+    }
+
     fn by_mut(&mut self) -> crate::ext::Mut<Self> {
         crate::ext::Mut(self)
     }

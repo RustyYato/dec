@@ -7,6 +7,7 @@ mod _seq;
 mod all;
 mod any;
 mod compare;
+mod context;
 mod multi;
 mod not;
 mod optional;
@@ -59,6 +60,7 @@ pub mod map {
 pub mod combinator {
     use crate::*;
 
+    pub use context::Context;
     pub use not::Not;
     pub use optional::Opt;
     pub use recognize::Recognize;
