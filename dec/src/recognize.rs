@@ -17,3 +17,15 @@ impl<P: ParseOnce<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseOnce<I, E
         Ok((input, (recognized, output)))
     }
 }
+
+impl<P: ParseMut<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseMut<I, E> for Recognize<P> {
+    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+        Recognize(self.0.by_mut()).parse_once(input)
+    }
+}
+
+impl<P: Parse<I, E>, I: Clone + InputSplit, E: ParseError<I>> Parse<I, E> for Recognize<P> {
+    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+        Recognize(self.0.by_ref()).parse_once(input)
+    }
+}
