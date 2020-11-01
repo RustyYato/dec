@@ -9,6 +9,7 @@ mod any;
 mod compare;
 mod multi;
 mod not;
+mod optional;
 mod recognize;
 mod separated;
 mod skip;
@@ -59,6 +60,7 @@ pub mod combinator {
     use crate::*;
 
     pub use not::Not;
+    pub use optional::Opt;
     pub use recognize::Recognize;
     pub use value::Value;
     pub use verify::Verify;
