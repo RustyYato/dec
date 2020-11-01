@@ -22,10 +22,15 @@ pub enum ErrorKind {
     Custom(&'static str),
 }
 
-pub trait ParseError<I> {
+pub trait ParseError<I>: Sized {
     fn from_input_kind(input: I, kind: ErrorKind) -> Self;
 
     fn append(self, input: I, kind: ErrorKind) -> Self;
+
+    #[allow(unused)]
+    fn add_context(self, input: I, ctx: &'static str) -> Self {
+        self
+    }
 
     fn or(self, other: Self) -> Self;
 }

@@ -13,6 +13,7 @@ mod optional;
 mod recognize;
 mod separated;
 mod skip;
+mod until;
 mod value;
 mod verify;
 
@@ -43,11 +44,10 @@ pub mod seq {
 
     pub use _seq::{Fst, Mid, Snd};
     pub use all::All;
-
     pub use multi::{fold, Fold, FoldN, FoldRange};
     pub use multi::{imany0, imany1, irange, many0, many1, range, Range};
-
     pub use separated::{iseparated, separated, SeparatedFoldRange, SeparatedRange};
+    pub use until::Until;
 }
 
 pub mod map {
