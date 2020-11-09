@@ -5,7 +5,12 @@ use crate::prelude::*;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Context<P>(pub &'static str, pub P);
 
-impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Context<P> {
+impl<P, I, E> ParseOnce<I, E> for Context<P>
+where
+    P: ParseOnce<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     type Output = P::Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -18,13 +23,23 @@ impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Context
     }
 }
 
-impl<P: ParseMut<I, E>, I: Clone, E: ParseError<I>> ParseMut<I, E> for Context<P> {
+impl<P, I, E> ParseMut<I, E> for Context<P>
+where
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Context(self.0, self.1.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, I: Clone, E: ParseError<I>> Parse<I, E> for Context<P> {
+impl<P, I, E> Parse<I, E> for Context<P>
+where
+    P: Parse<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Context(self.0, self.1.by_ref()).parse_once(input)
     }
@@ -34,7 +49,12 @@ impl<P: Parse<I, E>, I: Clone, E: ParseError<I>> Parse<I, E> for Context<P> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AppendError<P>(pub ErrorKind, pub P);
 
-impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for AppendError<P> {
+impl<P, I, E> ParseOnce<I, E> for AppendError<P>
+where
+    P: ParseOnce<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     type Output = P::Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -47,13 +67,23 @@ impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for AppendE
     }
 }
 
-impl<P: ParseMut<I, E>, I: Clone, E: ParseError<I>> ParseMut<I, E> for AppendError<P> {
+impl<P, I, E> ParseMut<I, E> for AppendError<P>
+where
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         AppendError(self.0, self.1.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, I: Clone, E: ParseError<I>> Parse<I, E> for AppendError<P> {
+impl<P, I, E> Parse<I, E> for AppendError<P>
+where
+    P: Parse<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         AppendError(self.0, self.1.by_ref()).parse_once(input)
     }

@@ -5,7 +5,12 @@ use crate::traits::*;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Recognize<P>(pub P);
 
-impl<P: ParseOnce<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseOnce<I, E> for Recognize<P> {
+impl<P, I, E> ParseOnce<I, E> for Recognize<P>
+where
+    P: ParseOnce<I, E>,
+    I: Clone + InputSplit,
+    E: ParseError<I>,
+{
     type Output = (I, P::Output);
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -18,14 +23,29 @@ impl<P: ParseOnce<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseOnce<I, E
     }
 }
 
-impl<P: ParseMut<I, E>, I: Clone + InputSplit, E: ParseError<I>> ParseMut<I, E> for Recognize<P> {
+impl<P, I, E> ParseMut<I, E> for Recognize<P>
+where
+    P: ParseMut<I, E>,
+    I: Clone + InputSplit,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Recognize(self.0.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, I: Clone + InputSplit, E: ParseError<I>> Parse<I, E> for Recognize<P> {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+impl<P, I, E> Parse<I, E> for Recognize<P>
+where
+    P: Parse<I, E>,
+    I: Clone + InputSplit,
+    E: ParseError<I>,
+{
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E>
+    where
+        P: Parse<I, E>,
+        I: Clone + InputSplit,
+        E: ParseError<I>,
+    {
         Recognize(self.0.by_ref()).parse_once(input)
     }
 }

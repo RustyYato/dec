@@ -5,8 +5,12 @@ use crate::prelude::*;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Verify<P, F>(pub P, pub F);
 
-impl<P: ParseOnce<I, E>, F: FnOnce(&P::Output) -> bool, I: Clone, E: ParseError<I>> ParseOnce<I, E>
-    for Verify<P, F>
+impl<F, P, I, E> ParseOnce<I, E> for Verify<P, F>
+where
+    P: ParseOnce<I, E>,
+    F: FnOnce(&P::Output) -> bool,
+    I: Clone,
+    E: ParseError<I>,
 {
     type Output = P::Output;
 
@@ -25,16 +29,24 @@ impl<P: ParseOnce<I, E>, F: FnOnce(&P::Output) -> bool, I: Clone, E: ParseError<
     }
 }
 
-impl<P: ParseMut<I, E>, F: FnMut(&P::Output) -> bool, I: Clone, E: ParseError<I>> ParseMut<I, E>
-    for Verify<P, F>
+impl<F, P, I, E> ParseMut<I, E> for Verify<P, F>
+where
+    P: ParseMut<I, E>,
+    F: FnMut(&P::Output) -> bool,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Verify(self.0.by_mut(), &mut self.1).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, F: Fn(&P::Output) -> bool, I: Clone, E: ParseError<I>> Parse<I, E>
-    for Verify<P, F>
+impl<F, P, I, E> Parse<I, E> for Verify<P, F>
+where
+    P: Parse<I, E>,
+    F: Fn(&P::Output) -> bool,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Verify(self.0.by_ref(), &self.1).parse_once(input)

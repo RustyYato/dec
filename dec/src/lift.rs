@@ -9,7 +9,12 @@ pub struct Lower<P>(pub P);
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Lift<P>(pub P);
 
-impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Lower<P> {
+impl<P, I, E> ParseOnce<I, E> for Lower<P>
+where
+    P: ParseOnce<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     type Output = Result<P::Output, E>;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -21,20 +26,33 @@ impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Lower<P
     }
 }
 
-impl<P: ParseMut<I, E>, I: Clone, E: ParseError<I>> ParseMut<I, E> for Lower<P> {
+impl<P, I, E> ParseMut<I, E> for Lower<P>
+where
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Lower(self.0.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, I: Clone, E: ParseError<I>> Parse<I, E> for Lower<P> {
+impl<P, I, E> Parse<I, E> for Lower<P>
+where
+    P: Parse<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Lower(self.0.by_ref()).parse_once(input)
     }
 }
 
-impl<P: ParseOnce<I, E, Output = Result<O, E>>, O, I, E: ParseError<I>> ParseOnce<I, E>
-    for Lift<P>
+impl<P, I, E, O> ParseOnce<I, E> for Lift<P>
+where
+    P: ParseOnce<I, E, Output = Result<O, E>>,
+    I: Clone,
+    E: ParseError<I>,
 {
     type Output = O;
 
@@ -47,13 +65,23 @@ impl<P: ParseOnce<I, E, Output = Result<O, E>>, O, I, E: ParseError<I>> ParseOnc
     }
 }
 
-impl<P: ParseMut<I, E, Output = Result<O, E>>, O, I, E: ParseError<I>> ParseMut<I, E> for Lift<P> {
+impl<P, I, E, O> ParseMut<I, E> for Lift<P>
+where
+    P: ParseMut<I, E, Output = Result<O, E>>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Lift(self.0.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E, Output = Result<O, E>>, O, I, E: ParseError<I>> Parse<I, E> for Lift<P> {
+impl<P, I, E, O> Parse<I, E> for Lift<P>
+where
+    P: Parse<I, E, Output = Result<O, E>>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Lift(self.0.by_ref()).parse_once(input)
     }

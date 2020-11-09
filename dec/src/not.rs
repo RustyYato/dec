@@ -5,7 +5,12 @@ use crate::prelude::*;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Not<P>(pub P);
 
-impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Not<P> {
+impl<P, I, E> ParseOnce<I, E> for Not<P>
+where
+    P: ParseOnce<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     type Output = ();
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -20,13 +25,23 @@ impl<P: ParseOnce<I, E>, I: Clone, E: ParseError<I>> ParseOnce<I, E> for Not<P> 
     }
 }
 
-impl<P: ParseMut<I, E>, I: Clone, E: ParseError<I>> ParseMut<I, E> for Not<P> {
+impl<P, I, E> ParseMut<I, E> for Not<P>
+where
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Not(self.0.by_mut()).parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, I: Clone, E: ParseError<I>> Parse<I, E> for Not<P> {
+impl<P, I, E> Parse<I, E> for Not<P>
+where
+    P: Parse<I, E>,
+    I: Clone,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Not(self.0.by_ref()).parse_once(input)
     }

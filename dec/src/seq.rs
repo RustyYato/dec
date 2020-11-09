@@ -26,7 +26,12 @@ fn _mid<A, B, C>((_, b, _): (A, B, C)) -> B {
     b
 }
 
-impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Fst<A, B> {
+impl<A, B, I, E> ParseOnce<I, E> for Fst<A, B>
+where
+    A: ParseOnce<I, E>,
+    B: ParseOnce<I, E>,
+    E: ParseError<I>,
+{
     type Output = A::Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -34,19 +39,34 @@ impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E
     }
 }
 
-impl<A: ParseMut<I, E>, B: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Fst<A, B> {
+impl<A, B, I, E> ParseMut<I, E> for Fst<A, B>
+where
+    A: ParseMut<I, E>,
+    B: ParseMut<I, E>,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Map(All((Mut(&mut self.0), Mut(&mut self.1))), _fst).parse_once(input)
     }
 }
 
-impl<A: Parse<I, E>, B: Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Fst<A, B> {
+impl<A, B, I, E> Parse<I, E> for Fst<A, B>
+where
+    A: Parse<I, E>,
+    B: Parse<I, E>,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Map(All((Ref(&self.0), Ref(&self.1))), _fst).parse_once(input)
     }
 }
 
-impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Snd<A, B> {
+impl<A, B, I, E> ParseOnce<I, E> for Snd<A, B>
+where
+    A: ParseOnce<I, E>,
+    B: ParseOnce<I, E>,
+    E: ParseError<I>,
+{
     type Output = B::Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -54,20 +74,34 @@ impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E
     }
 }
 
-impl<A: ParseMut<I, E>, B: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Snd<A, B> {
+impl<A, B, I, E> ParseMut<I, E> for Snd<A, B>
+where
+    A: ParseMut<I, E>,
+    B: ParseMut<I, E>,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Map(All((Mut(&mut self.0), Mut(&mut self.1))), _snd).parse_once(input)
     }
 }
 
-impl<A: Parse<I, E>, B: Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Snd<A, B> {
+impl<A, B, I, E> Parse<I, E> for Snd<A, B>
+where
+    A: Parse<I, E>,
+    B: Parse<I, E>,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Map(All((Ref(&self.0), Ref(&self.1))), _snd).parse_once(input)
     }
 }
 
-impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, C: ParseOnce<I, E>, I, E: ParseError<I>>
-    ParseOnce<I, E> for Mid<A, B, C>
+impl<A, B, C, I, E> ParseOnce<I, E> for Mid<A, B, C>
+where
+    A: ParseOnce<I, E>,
+    B: ParseOnce<I, E>,
+    C: ParseOnce<I, E>,
+    E: ParseError<I>,
 {
     type Output = B::Output;
 
@@ -76,8 +110,12 @@ impl<A: ParseOnce<I, E>, B: ParseOnce<I, E>, C: ParseOnce<I, E>, I, E: ParseErro
     }
 }
 
-impl<A: ParseMut<I, E>, B: ParseMut<I, E>, C: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E>
-    for Mid<A, B, C>
+impl<A, B, C, I, E> ParseMut<I, E> for Mid<A, B, C>
+where
+    A: ParseMut<I, E>,
+    B: ParseMut<I, E>,
+    C: ParseMut<I, E>,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Map(
@@ -88,8 +126,12 @@ impl<A: ParseMut<I, E>, B: ParseMut<I, E>, C: ParseMut<I, E>, I, E: ParseError<I
     }
 }
 
-impl<A: Parse<I, E>, B: Parse<I, E>, C: Parse<I, E>, I, E: ParseError<I>> Parse<I, E>
-    for Mid<A, B, C>
+impl<A, B, C, I, E> Parse<I, E> for Mid<A, B, C>
+where
+    A: Parse<I, E>,
+    B: Parse<I, E>,
+    C: Parse<I, E>,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Map(
