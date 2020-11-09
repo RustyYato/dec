@@ -15,8 +15,8 @@ impl<
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
-            mut parser,
-            mut value,
+            parser,
+            value,
             mut func,
         } = self;
 

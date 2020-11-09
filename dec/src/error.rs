@@ -20,6 +20,7 @@ pub enum ErrorKind {
     Skip,
     Not,
     Verify,
+    RangeStart,
     Custom(&'static str),
 }
 

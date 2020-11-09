@@ -138,6 +138,14 @@ impl<'i> Compare<&'i [u8]> for str {
     }
 }
 
+impl<'i> Compare<&'i str> for &[u8] {
+    type Output = &'i [u8];
+
+    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+        (**self).compare(input)
+    }
+}
+
 impl<'i> Compare<&'i str> for &str {
     type Output = &'i str;
 
@@ -431,6 +439,14 @@ impl<'i> Compare<&'i mut [u8]> for str {
             input,
             output.map(|v| unsafe { std::str::from_utf8_unchecked_mut(v) }),
         )
+    }
+}
+
+impl<'i> Compare<&'i mut str> for &[u8] {
+    type Output = &'i [u8];
+
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
+        (**self).compare(input)
     }
 }
 
