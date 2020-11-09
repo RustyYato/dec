@@ -32,25 +32,30 @@ pub trait ParserRef {
     }
 
     #[cfg(any(doc, feature = "nightly"))]
-    fn boxed_once<I, E>(self) -> crate::ext::Own<dyn ParseOnce<I, E, Output = Self::Output>>
+    fn boxed_once<'a, I, E>(
+        self,
+    ) -> crate::ext::Own<dyn 'a + ParseOnce<I, E, Output = Self::Output>>
     where
-        Self: ParseOnce<I, E>,
+        Self: 'a + ParseOnce<I, E> + Sized,
+        E: ParseError<I>,
     {
         crate::ext::Own(Box::new(self) as _)
     }
 
     #[cfg(any(doc, feature = "nightly"))]
-    fn boxed_mut<I, E>(self) -> crate::ext::Own<dyn ParseMut<I, E, Output = Self::Output>>
+    fn boxed_mut<'a, I, E>(self) -> crate::ext::Own<dyn 'a + ParseMut<I, E, Output = Self::Output>>
     where
-        Self: ParseMut<I, E>,
+        Self: 'a + ParseMut<I, E> + Sized,
+        E: ParseError<I>,
     {
         crate::ext::Own(Box::new(self) as _)
     }
 
     #[cfg(any(doc, feature = "nightly"))]
-    fn boxed<I, E>(self) -> crate::ext::Own<dyn Parse<I, E, Output = Self::Output>>
+    fn boxed<'a, I, E>(self) -> crate::ext::Own<dyn 'a + Parse<I, E, Output = Self::Output>>
     where
-        Self: Parse<I, E>,
+        Self: 'a + Parse<I, E> + Sized,
+        E: ParseError<I>,
     {
         crate::ext::Own(Box::new(self) as _)
     }
