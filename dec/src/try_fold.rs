@@ -7,6 +7,18 @@ mod nightly;
 #[cfg(not(feature = "nightly"))]
 mod stable;
 
+pub fn try_fold<P, A: Clone, F>(
+    acc: A,
+    parser: P,
+    func: F,
+) -> TryFold<P, impl Fn() -> A + Clone, F> {
+    TryFold {
+        parser,
+        mk_acc: move || acc.clone(),
+        func,
+    }
+}
+
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TryFold<P, A, F> {

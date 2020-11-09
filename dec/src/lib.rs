@@ -56,6 +56,7 @@ pub mod seq {
     pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange};
     pub use multi::{imany0, imany1, irange, many0, many1, range, Range};
     pub use separated::{iseparated, separated, SeparatedFoldRange, SeparatedRange};
+    pub use try_fold::{try_fold, TryFold};
     pub use until::{FoldUntil, Until};
 
     pub fn all<P>(tuple: P) -> All<P> {

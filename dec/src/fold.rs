@@ -5,38 +5,38 @@ use crate::try_fold::TryFold;
 
 use std::ops::{Bound, RangeBounds};
 
-pub fn fold<P, A, F>(mk_acc: A, parser: P, func: F) -> Fold<P, A, F> {
+pub fn fold<P, A: Clone, F>(acc: A, parser: P, func: F) -> Fold<P, impl Fn() -> A + Clone, F> {
     Fold {
         parser,
-        mk_acc,
+        mk_acc: move || acc.clone(),
         func,
     }
 }
 
-pub fn fold_exact<P, A, F>(
+pub fn fold_exact<P, A: Clone, F>(
     count: usize,
+    acc: A,
     parser: P,
-    mk_acc: A,
     func: F,
-) -> FoldRange<P, A, F, std::ops::RangeInclusive<usize>> {
+) -> FoldRange<P, impl Fn() -> A + Clone, F, std::ops::RangeInclusive<usize>> {
     FoldRange {
         range: count..=count,
         parser,
-        mk_acc,
+        mk_acc: move || acc.clone(),
         func,
     }
 }
 
-pub fn fold_range<R: RangeBounds<usize>, P, A, F>(
+pub fn fold_range<R: RangeBounds<usize>, P, A: Clone, F>(
     range: R,
+    acc: A,
     parser: P,
-    mk_acc: A,
     func: F,
-) -> FoldRange<P, A, F, R> {
+) -> FoldRange<P, impl Fn() -> A + Clone, F, R> {
     FoldRange {
         range,
         parser,
-        mk_acc,
+        mk_acc: move || acc.clone(),
         func,
     }
 }
