@@ -4,7 +4,11 @@ use crate::{error::*, prelude::*};
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Value<T, P>(pub T, pub P);
 
-impl<T, P: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Value<T, P> {
+impl<T, P, I, E> ParseOnce<I, E> for Value<T, P>
+where
+    P: ParseOnce<I, E>,
+    E: ParseError<I>,
+{
     type Output = T;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -14,7 +18,12 @@ impl<T, P: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Value<T, P>
     }
 }
 
-impl<T: Clone, P: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Value<T, P> {
+impl<T, P, I, E> ParseMut<I, E> for Value<T, P>
+where
+    T: Clone,
+    P: ParseMut<I, E>,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let Value(value, parser) = self;
         let (input, _) = parser.parse_mut(input)?;
@@ -22,7 +31,12 @@ impl<T: Clone, P: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Value<
     }
 }
 
-impl<T: Clone, P: Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Value<T, P> {
+impl<T, P, I, E> Parse<I, E> for Value<T, P>
+where
+    T: Clone,
+    P: Parse<I, E>,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let Value(value, parser) = self;
         let (input, _) = parser.parse(input)?;

@@ -2,8 +2,8 @@ use super::*;
 
 impl<P, A, MkA, F, I, E, E2> ParseOnce<I, E> for TryFold<P, MkA, F>
 where
-    P: ParseMut<I, E>,
     MkA: FnOnce() -> A,
+    P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> Result<A, E2>,
     I: Clone,
     E: ParseError<I>,
@@ -22,8 +22,8 @@ where
 
 impl<P, A, MkA, F, I, E, E2> ParseMut<I, E> for TryFold<P, MkA, F>
 where
-    P: ParseMut<I, E>,
     MkA: FnMut() -> A,
+    P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> Result<A, E2>,
     I: Clone,
     E: ParseError<I>,
@@ -40,8 +40,8 @@ where
 
 impl<P, A, MkA, F, I, E, E2> Parse<I, E> for TryFold<P, MkA, F>
 where
-    P: Parse<I, E>,
     MkA: Fn() -> A,
+    P: Parse<I, E>,
     F: Fn(A, P::Output) -> Result<A, E2>,
     I: Clone,
     E: ParseError<I>,

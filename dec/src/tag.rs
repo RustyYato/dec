@@ -13,7 +13,11 @@ pub struct AnyOf<T>(pub T);
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NoneOf<T>(pub T);
 
-impl<T: Compare<I>, I, E: ParseError<I>> ParseOnce<I, E> for Tag<T> {
+impl<T, I, E> ParseOnce<I, E> for Tag<T>
+where
+    T: Compare<I>,
+    E: ParseError<I>,
+{
     type Output = T::Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -21,13 +25,21 @@ impl<T: Compare<I>, I, E: ParseError<I>> ParseOnce<I, E> for Tag<T> {
     }
 }
 
-impl<T: Compare<I>, I, E: ParseError<I>> ParseMut<I, E> for Tag<T> {
+impl<T, I, E> ParseMut<I, E> for Tag<T>
+where
+    T: Compare<I>,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         self.parse(input)
     }
 }
 
-impl<T: Compare<I>, I, E: ParseError<I>> Parse<I, E> for Tag<T> {
+impl<T, I, E> Parse<I, E> for Tag<T>
+where
+    T: Compare<I>,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.compare(input);
         match output {

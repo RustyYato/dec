@@ -5,7 +5,11 @@ use crate::{error::*, traits::InputSplit};
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Skip(pub usize);
 
-impl<I: InputSplit, E: ParseError<I>> ParseOnce<I, E> for Skip {
+impl<I, E> ParseOnce<I, E> for Skip
+where
+    I: InputSplit,
+    E: ParseError<I>,
+{
     type Output = ();
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
@@ -13,13 +17,21 @@ impl<I: InputSplit, E: ParseError<I>> ParseOnce<I, E> for Skip {
     }
 }
 
-impl<I: InputSplit, E: ParseError<I>> ParseMut<I, E> for Skip {
+impl<I, E> ParseMut<I, E> for Skip
+where
+    I: InputSplit,
+    E: ParseError<I>,
+{
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         self.parse(input)
     }
 }
 
-impl<I: InputSplit, E: ParseError<I>> Parse<I, E> for Skip {
+impl<I, E> Parse<I, E> for Skip
+where
+    I: InputSplit,
+    E: ParseError<I>,
+{
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         match input.advance(self.0) {
             Ok(input) => Ok((input, ())),
