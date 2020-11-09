@@ -13,7 +13,14 @@ pub trait ParserRef {
     where
         Self: Sized,
     {
-        crate::combinator::Context(self, ctx)
+        crate::combinator::Context(ctx, self)
+    }
+
+    fn append_error(self, kind: crate::error::ErrorKind) -> crate::combinator::AppendError<Self>
+    where
+        Self: Sized,
+    {
+        crate::combinator::AppendError(kind, self)
     }
 
     fn by_mut(&mut self) -> crate::ext::Mut<Self> {

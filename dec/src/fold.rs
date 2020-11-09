@@ -334,7 +334,7 @@ mod test {
     #[test]
     fn foo() -> Result<(), Error<()>> {
         let parser = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: ..3,
@@ -345,7 +345,7 @@ mod test {
         assert_eq!(value, 2);
 
         let parser = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: ..=2,
@@ -364,7 +364,7 @@ mod test {
         assert_eq!(value, 2);
 
         let parser = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: 2..,
@@ -381,7 +381,7 @@ mod test {
         assert_eq!(value, 4);
 
         let parser = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: 2..=4,
@@ -402,7 +402,7 @@ mod test {
         assert_eq!(value, 4);
 
         let parser = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: 4..=4,
@@ -428,7 +428,7 @@ mod test {
     #[should_panic(expected = "malformed range")]
     fn invalid_range() {
         let _: PResult<_, _, ()> = FoldRange {
-            parser: Tag(".".as_bytes()),
+            parser: Tag("."),
             value: 0,
             func: |acc, _| acc + 1,
             range: 4..=2,

@@ -122,17 +122,22 @@ pub mod map {
 }
 
 pub mod combinator {
+    use crate::error::ErrorKind;
     use crate::*;
 
-    pub use context::Context;
+    pub use context::{AppendError, Context};
     pub use lift::{Lift, Lower};
     pub use not::Not;
     pub use optional::Opt;
     pub use recognize::Recognize;
     pub use verify::Verify;
 
-    pub fn context<P>(context: &'static str, parser: P) -> Context<P> {
-        Context(parser, context)
+    pub fn context<P>(ctx: &'static str, parser: P) -> Context<P> {
+        Context(ctx, parser)
+    }
+
+    pub fn append_error<P>(kind: ErrorKind, parser: P) -> AppendError<P> {
+        AppendError(kind, parser)
     }
 
     pub fn lift<P>(parser: P) -> Lift<P> {

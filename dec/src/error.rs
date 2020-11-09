@@ -13,7 +13,7 @@ impl<E> From<E> for Error<E> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum ErrorKind {
     Tag,
     Any,
