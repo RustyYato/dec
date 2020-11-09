@@ -351,6 +351,14 @@ mod test {
             range: ..=2,
         };
 
+        let (input, value) = parser.parse_once(".")?;
+        assert_eq!(input, "");
+        assert_eq!(value, 1);
+
+        let (input, value) = parser.parse_once("..")?;
+        assert_eq!(input, "");
+        assert_eq!(value, 2);
+
         let (input, value) = parser.parse_once("....")?;
         assert_eq!(input, "..");
         assert_eq!(value, 2);
@@ -384,6 +392,26 @@ mod test {
         let (input, value) = parser.parse("..")?;
         assert_eq!(input, "");
         assert_eq!(value, 2);
+
+        let (input, value) = parser.parse("....")?;
+        assert_eq!(input, "");
+        assert_eq!(value, 4);
+
+        let (input, value) = parser.parse(".....")?;
+        assert_eq!(input, ".");
+        assert_eq!(value, 4);
+
+        let parser = FoldRange {
+            parser: Tag(".".as_bytes()),
+            value: 0,
+            func: |acc, _| acc + 1,
+            range: 4..=4,
+        };
+
+        let _: Error<()> = parser.parse(".").unwrap_err();
+        let _: Error<()> = parser.parse("").unwrap_err();
+        let _: Error<()> = parser.parse("..").unwrap_err();
+        let _: Error<()> = parser.parse("...").unwrap_err();
 
         let (input, value) = parser.parse("....")?;
         assert_eq!(input, "");

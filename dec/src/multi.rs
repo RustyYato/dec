@@ -123,7 +123,7 @@ mod test {
         let parser = Range(2.., Tag('.'), Vec::new);
         assert_eq!(
             ParseOnce::parse_once(parser, ".input"),
-            Err(Error::Error(("input", ErrorKind::Tag)))
+            Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
         let parser = Range(2.., Tag('.'), Vec::new);
         assert_eq!(
@@ -134,7 +134,7 @@ mod test {
         let parser = Range(1..=3, Tag('.'), String::new);
         assert_eq!(
             ParseOnce::parse_once(parser.by_ref(), "input"),
-            Err(Error::Error(("input", ErrorKind::Tag)))
+            Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser.by_ref(), ".input"),
