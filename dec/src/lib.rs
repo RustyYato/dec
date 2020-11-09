@@ -9,6 +9,7 @@ mod any;
 mod compare;
 mod context;
 mod fold;
+mod lift;
 mod multi;
 mod not;
 mod optional;
@@ -63,6 +64,7 @@ pub mod combinator {
     use crate::*;
 
     pub use context::Context;
+    pub use lift::{Lift, Lower};
     pub use not::Not;
     pub use optional::Opt;
     pub use recognize::Recognize;
