@@ -1,5 +1,5 @@
 pub type DefaultError<I> = (I, ErrorKind);
-pub type Result<I, T, E = DefaultError<I>> = std::result::Result<(I, T), Error<E>>;
+pub type PResult<I, T, E = DefaultError<I>> = std::result::Result<(I, T), Error<E>>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error<E> {

@@ -8,33 +8,33 @@ pub struct All<T>(pub T);
 pub trait TupleAllOnce<I, E> {
     type Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E>;
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 pub trait TupleAllMut<I, E>: TupleAllOnce<I, E> {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E>;
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 pub trait TupleAll<I, E>: TupleAllMut<I, E> {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E>;
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 impl<T: TupleAllOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for All<T> {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         self.0.parse_once(input)
     }
 }
 
 impl<T: TupleAllMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for All<T> {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         self.0.parse_mut(input)
     }
 }
 
 impl<T: TupleAll<I, E>, I, E: ParseError<I>> Parse<I, E> for All<T> {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         self.0.parse(input)
     }
 }
@@ -53,7 +53,7 @@ macro_rules! impl_tuple_fold {
             );
 
             #[allow(unused_mut, non_snake_case)]
-            fn parse_once(self, input: Input) -> Result<Input, Self::Output, Error> {
+            fn parse_once(self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
 
                 let (input, $i) = $i.parse_once(input)?;
@@ -69,7 +69,7 @@ macro_rules! impl_tuple_fold {
             $(, $ident: ParseMut<Input, Error>)*
         {
             #[allow(unused_mut, non_snake_case)]
-            fn parse_mut(&mut self, input: Input) -> Result<Input, Self::Output, Error> {
+            fn parse_mut(&mut self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
 
                 let (input, $i) = $i.parse_mut(input)?;
@@ -85,7 +85,7 @@ macro_rules! impl_tuple_fold {
             $(, $ident: Parse<Input, Error>)*
         {
             #[allow(unused_mut, non_snake_case)]
-            fn parse(&self, input: Input) -> Result<Input, Self::Output, Error> {
+            fn parse(&self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
 
                 let (input, $i) = $i.parse(input)?;

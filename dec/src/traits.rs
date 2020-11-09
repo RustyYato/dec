@@ -1,10 +1,10 @@
-use crate::error::{DefaultError, ParseError, Result};
+use crate::error::{DefaultError, ParseError, PResult};
 use crate::iter::Iter;
 
 pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {
     type Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E>;
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 impl<T: ?Sized> ParserRef for T {}
@@ -62,11 +62,11 @@ pub trait ParserRef {
 }
 
 pub trait ParseMut<I, E: ParseError<I> = DefaultError<I>>: ParseOnce<I, E> {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E>;
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 pub trait Parse<I, E: ParseError<I> = DefaultError<I>>: ParseMut<I, E> {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E>;
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 pub trait Compare<I> {

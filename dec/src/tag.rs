@@ -16,19 +16,19 @@ pub struct NoneOf<T>(pub T);
 impl<T: Compare<I>, I, E: ParseError<I>> ParseOnce<I, E> for Tag<T> {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         self.parse(input)
     }
 }
 
 impl<T: Compare<I>, I, E: ParseError<I>> ParseMut<I, E> for Tag<T> {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         self.parse(input)
     }
 }
 
 impl<T: Compare<I>, I, E: ParseError<I>> Parse<I, E> for Tag<T> {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.compare(input);
         match output {
             CompareResult::Ok(output) => Ok((input, output)),

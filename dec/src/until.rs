@@ -20,7 +20,7 @@ impl<
 {
     type Output = (C, Q::Output);
 
-    fn parse_once(mut self, mut input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(mut self, mut input: I) -> PResult<I, Self::Output, E> {
         let mut collection = (self.collection)();
 
         loop {
@@ -45,7 +45,7 @@ impl<
         E: ParseError<I>,
     > ParseMut<I, E> for Until<P, Q, F>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Until {
             parser: self.parser.by_mut(),
             stop: self.stop.by_mut(),
@@ -64,7 +64,7 @@ impl<
         E: ParseError<I>,
     > Parse<I, E> for Until<P, Q, F>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Until {
             parser: self.parser.by_ref(),
             stop: self.stop.by_ref(),

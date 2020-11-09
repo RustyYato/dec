@@ -64,7 +64,7 @@ where
 {
     type Output = A;
 
-    fn parse_once(mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E> {
         let (start, end) = parse_bounds(self.range.start_bound(), self.range.end_bound());
 
         if end == Some(0) {
@@ -130,7 +130,7 @@ where
     Fp: FnMut(A, P::Output) -> A,
     R: RangeBounds<usize>,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedFoldRange {
             sep: self.sep.by_mut(),
             item: self.item.by_mut(),
@@ -154,7 +154,7 @@ where
     Fp: Fn(A, P::Output) -> A,
     R: RangeBounds<usize>,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedFoldRange {
             sep: self.sep.by_ref(),
             item: self.item.by_ref(),
@@ -179,7 +179,7 @@ where
 {
     type Output = A;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedFoldRange {
             sep: self.sep,
             item: self.item,
@@ -205,7 +205,7 @@ where
     A: Extend<P::Output>,
     R: RangeBounds<usize>,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedRange {
             collection: &mut self.collection,
             item: self.item.by_mut(),
@@ -226,7 +226,7 @@ where
     A: Extend<P::Output>,
     R: RangeBounds<usize>,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedRange {
             collection: &self.collection,
             item: self.item.by_ref(),

@@ -14,7 +14,7 @@ where
 {
     type Output = Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_once(input)?;
         Ok((input, (self.1)(output)))
     }
@@ -24,7 +24,7 @@ impl<P: ParseMut<I, E>, Output, F, I, E: ParseError<I>> ParseMut<I, E> for Map<P
 where
     F: FnMut(P::Output) -> Output,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
         Ok((input, (self.1)(output)))
     }
@@ -34,7 +34,7 @@ impl<P: Parse<I, E>, Output, F, I, E: ParseError<I>> Parse<I, E> for Map<P, F>
 where
     F: Fn(P::Output) -> Output,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
         Ok((input, (self.1)(output)))
     }
@@ -51,7 +51,7 @@ where
 {
     type Output = P::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, Error> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, Error> {
         match self.0.parse_once(input) {
             Ok(res) => Ok(res),
             Err(self::Error::Error(err)) => Err(self::Error::Error((self.1)(err))),
@@ -65,7 +65,7 @@ impl<P: ParseMut<I, E>, Error: ParseError<I>, F, I, E: ParseError<I>> ParseMut<I
 where
     F: FnMut(E) -> Error,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, Error> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, Error> {
         match self.0.parse_mut(input) {
             Ok(res) => Ok(res),
             Err(self::Error::Error(err)) => Err(self::Error::Error((self.1)(err))),
@@ -79,7 +79,7 @@ impl<P: Parse<I, E>, Error: ParseError<I>, F, I, E: ParseError<I>> Parse<I, Erro
 where
     F: Fn(E) -> Error,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, Error> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, Error> {
         match self.0.parse(input) {
             Ok(res) => Ok(res),
             Err(self::Error::Error(err)) => Err(self::Error::Error((self.1)(err))),
@@ -98,7 +98,7 @@ where
 {
     type Output = Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_once(input)?;
         Ok((input, (self.1)(output)?))
     }
@@ -108,7 +108,7 @@ impl<P: ParseMut<I, E>, Output, F, I, E: ParseError<I>> ParseMut<I, E> for TryMa
 where
     F: FnMut(P::Output) -> StdResult<Output, E>,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
         Ok((input, (self.1)(output)?))
     }
@@ -118,7 +118,7 @@ impl<P: Parse<I, E>, Output, F, I, E: ParseError<I>> Parse<I, E> for TryMap<P, F
 where
     F: Fn(P::Output) -> StdResult<Output, E>,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
         Ok((input, (self.1)(output)?))
     }
@@ -134,7 +134,7 @@ where
 {
     type Output = Q::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_once(input)?;
         (self.1)(output).parse_once(input)
     }
@@ -144,7 +144,7 @@ impl<P: ParseMut<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> ParseMut<I, 
 where
     F: FnMut(P::Output) -> Q,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
         (self.1)(output).parse_once(input)
     }
@@ -154,7 +154,7 @@ impl<P: Parse<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> Parse<I, E> for
 where
     F: Fn(P::Output) -> Q,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
         (self.1)(output).parse_once(input)
     }
@@ -171,7 +171,7 @@ where
 {
     type Output = Q::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_once(input)?;
         (self.1)(output)?.parse_once(input)
     }
@@ -181,7 +181,7 @@ impl<P: ParseMut<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> ParseMut<I, 
 where
     F: FnMut(P::Output) -> StdResult<Q, E>,
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
         (self.1)(output)?.parse_once(input)
     }
@@ -191,7 +191,7 @@ impl<P: Parse<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> Parse<I, E> for
 where
     F: Fn(P::Output) -> StdResult<Q, E>,
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
         (self.1)(output)?.parse_once(input)
     }

@@ -10,7 +10,7 @@ impl<P: ParseOnce<I, E>, F: FnOnce(&P::Output) -> bool, I: Clone, E: ParseError<
 {
     type Output = P::Output;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let old_input = input.clone();
         let (input, output) = self.0.parse_once(input)?;
 
@@ -28,7 +28,7 @@ impl<P: ParseOnce<I, E>, F: FnOnce(&P::Output) -> bool, I: Clone, E: ParseError<
 impl<P: ParseMut<I, E>, F: FnMut(&P::Output) -> bool, I: Clone, E: ParseError<I>> ParseMut<I, E>
     for Verify<P, F>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Verify(self.0.by_mut(), &mut self.1).parse_once(input)
     }
 }
@@ -36,7 +36,7 @@ impl<P: ParseMut<I, E>, F: FnMut(&P::Output) -> bool, I: Clone, E: ParseError<I>
 impl<P: Parse<I, E>, F: Fn(&P::Output) -> bool, I: Clone, E: ParseError<I>> Parse<I, E>
     for Verify<P, F>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Verify(self.0.by_ref(), &self.1).parse_once(input)
     }
 }

@@ -133,7 +133,7 @@ impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V, I: InputEq + Clone, E: P
 {
     type Output = V;
 
-    fn parse_once(self, mut input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
             mut value,
@@ -160,7 +160,7 @@ impl<
         E: ParseError<I>,
     > ParseMut<I, E> for Fold<P, V, F>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Fold {
             parser: Mut(&mut self.parser),
             value: self.value.clone(),
@@ -173,7 +173,7 @@ impl<
 impl<P: Parse<I, E>, F: Fn(V, P::Output) -> V, V: Clone, I: InputEq + Clone, E: ParseError<I>>
     Parse<I, E> for Fold<P, V, F>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Fold {
             parser: Ref(&self.parser),
             value: self.value.clone(),
@@ -188,7 +188,7 @@ impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V, I: Clone, E: ParseError<
 {
     type Output = V;
 
-    fn parse_once(self, mut input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
             mut value,
@@ -214,7 +214,7 @@ fn fold_range_impl<P, V, F, I, E>(
     end: Bound<&usize>,
     fold: Fold<P, V, F>,
     mut input: I,
-) -> Result<I, V, E>
+) -> PResult<I, V, E>
 where
     I: InputEq + Clone,
     E: ParseError<I>,
@@ -265,7 +265,7 @@ impl<
 {
     type Output = V;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         fold_range_impl(
             self.range.start_bound(),
             self.range.end_bound(),
@@ -288,7 +288,7 @@ impl<
         E: ParseError<I>,
     > ParseMut<I, E> for FoldRange<P, V, F, R>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         fold_range_impl(
             self.range.start_bound(),
             self.range.end_bound(),
@@ -311,7 +311,7 @@ impl<
         E: ParseError<I>,
     > Parse<I, E> for FoldRange<P, V, F, R>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         fold_range_impl(
             self.range.start_bound(),
             self.range.end_bound(),
@@ -330,7 +330,7 @@ impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V, I, E: ParseError<I>> Par
 {
     type Output = V;
 
-    fn parse_once(self, mut input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
             mut value,
@@ -349,7 +349,7 @@ impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V, I, E: ParseError<I>> Par
 impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V: Clone, I, E: ParseError<I>> ParseMut<I, E>
     for FoldN<P, V, F>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         FoldN {
             parser: Mut(&mut self.parser),
             value: self.value.clone(),
@@ -363,7 +363,7 @@ impl<P: ParseMut<I, E>, F: FnMut(V, P::Output) -> V, V: Clone, I, E: ParseError<
 impl<P: Parse<I, E>, F: Fn(V, P::Output) -> V, V: Clone, I, E: ParseError<I>> Parse<I, E>
     for FoldN<P, V, F>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         FoldN {
             parser: Ref(&self.parser),
             value: self.value.clone(),
@@ -385,7 +385,7 @@ fn range_impl<P, I, C, E>(
     mut parser: P,
     collection: C,
     input: I,
-) -> Result<I, C, E>
+) -> PResult<I, C, E>
 where
     I: InputEq + Clone,
     P: ParseMut<I, E>,
@@ -433,7 +433,7 @@ impl<
 {
     type Output = C;
 
-    fn parse_once(self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         range_impl(
             self.0.start_bound(),
             self.0.end_bound(),
@@ -453,7 +453,7 @@ impl<
         E: ParseError<I>,
     > ParseMut<I, E> for Range<R, P, F>
 {
-    fn parse_mut(&mut self, input: I) -> Result<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         range_impl(
             self.0.start_bound(),
             self.0.end_bound(),
@@ -473,7 +473,7 @@ impl<
         E: ParseError<I>,
     > Parse<I, E> for Range<R, P, F>
 {
-    fn parse(&self, input: I) -> Result<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         range_impl(
             self.0.start_bound(),
             self.0.end_bound(),

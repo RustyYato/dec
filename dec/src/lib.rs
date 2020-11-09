@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "nightly", feature(unsized_locals))]
+#![cfg_attr(feature = "nightly", feature(unsized_locals, try_trait))]
 
 #[path = "map.rs"]
 mod _map;
@@ -8,12 +8,14 @@ mod all;
 mod any;
 mod compare;
 mod context;
+mod fold;
 mod multi;
 mod not;
 mod optional;
 mod recognize;
 mod separated;
 mod skip;
+mod try_fold;
 mod until;
 mod value;
 mod verify;
@@ -30,7 +32,7 @@ pub mod tag;
 pub mod prelude {
     use crate::*;
 
-    pub use error::{Error, ErrorKind, Result as PResult};
+    pub use error::{Error, ErrorKind, PResult};
     pub use traits::{Parse, ParseMut, ParseOnce, ParserRef};
 }
 
