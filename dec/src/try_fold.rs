@@ -31,11 +31,11 @@ fn try_fold_parse_once<
     loop {
         match parser.parse_mut(input.clone()) {
             Ok((i, out)) => {
+                input = i;
                 value = match func(value, out) {
                     Ok(val) => val,
                     Err(err) => return Ok((input, Err(err))),
                 };
-                input = i;
             }
             Err(Error::Error(_)) => return Ok((input, Ok(value))),
             Err(err) => return Err(err),
