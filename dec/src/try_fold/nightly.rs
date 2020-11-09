@@ -2,27 +2,27 @@ use super::*;
 
 use std::ops::Try;
 
-impl<
-        P: ParseMut<I, E>,
-        V,
-        F: FnMut(V, P::Output) -> R,
-        I: Clone,
-        E: ParseError<I>,
-        R: Try<Ok = V>,
-    > ParseOnce<I, E> for TryFold<P, V, F>
+impl<P, MkA, A, F, I, E, R> ParseOnce<I, E> for TryFold<P, MkA, F>
+where
+    MkA: FnOnce() -> A,
+    P: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> R,
+    I: Clone,
+    E: ParseError<I>,
+    R: Try<Ok = A>,
 {
     type Output = R;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             mut func,
         } = self;
 
         match try_fold_parse_once(
             parser,
-            value,
+            mk_acc(),
             move |acc, value| R::into_result(func(acc, value)),
             input,
         ) {
@@ -33,50 +33,50 @@ impl<
     }
 }
 
-impl<
-        P: ParseMut<I, E>,
-        V: Clone,
-        F: FnMut(V, P::Output) -> R,
-        I: Clone,
-        E: ParseError<I>,
-        R: Try<Ok = V>,
-    > ParseMut<I, E> for TryFold<P, V, F>
+impl<P, MkA, A, F, I, E, R> ParseMut<I, E> for TryFold<P, MkA, F>
+where
+    MkA: FnMut() -> A,
+    P: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> R,
+    I: Clone,
+    E: ParseError<I>,
+    R: Try<Ok = A>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
         } = self;
 
         TryFold {
             parser: parser.by_mut(),
-            value: value.clone(),
+            mk_acc,
             func,
         }
         .parse_once(input)
     }
 }
 
-impl<
-        P: Parse<I, E>,
-        V: Clone,
-        F: Fn(V, P::Output) -> R,
-        I: Clone,
-        E: ParseError<I>,
-        R: Try<Ok = V>,
-    > Parse<I, E> for TryFold<P, V, F>
+impl<P, MkA, A, F, I, E, R> Parse<I, E> for TryFold<P, MkA, F>
+where
+    MkA: Fn() -> A,
+    P: Parse<I, E>,
+    F: Fn(A, P::Output) -> R,
+    I: Clone,
+    E: ParseError<I>,
+    R: Try<Ok = A>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
         } = self;
 
         TryFold {
             parser: parser.by_ref(),
-            value: value.clone(),
+            mk_acc,
             func,
         }
         .parse_once(input)

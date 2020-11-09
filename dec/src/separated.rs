@@ -38,7 +38,7 @@ pub struct SeparatedFoldRange<R, A, S, P, Fs, Fp> {
     pub item: P,
     pub sep_func: Fs,
     pub item_func: Fp,
-    pub acc: A,
+    pub mk_acc: A,
     pub range: R,
 }
 
@@ -51,7 +51,7 @@ pub struct SeparatedRange<R, S, P, C> {
     pub collection: C,
 }
 
-impl<R, A, Fs, Fp, S, P, I, E> ParseOnce<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
+impl<R, MkA, A, Fs, Fp, S, P, I, E> ParseOnce<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
 where
     I: Clone,
     E: ParseError<I>,
@@ -59,6 +59,7 @@ where
     P: ParseMut<I, E>,
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
+    MkA: FnOnce() -> A,
     R: RangeBounds<usize>,
 {
     type Output = A;
@@ -69,7 +70,7 @@ where
             mut item,
             mut sep_func,
             mut item_func,
-            acc,
+            mk_acc,
             range,
         } = self;
 
@@ -95,17 +96,17 @@ where
                 }
                 item_func(acc, item)
             },
-            value: acc,
+            mk_acc,
             range,
         }
         .parse_once(input)
     }
 }
 
-impl<R, A, Fs, Fp, S, P, I, E> ParseMut<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
+impl<R, MkA, A, Fs, Fp, S, P, I, E> ParseMut<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
 where
-    A: Clone,
     I: Clone,
+    MkA: FnMut() -> A,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -119,16 +120,16 @@ where
             item: self.item.by_mut(),
             sep_func: &mut self.sep_func,
             item_func: &mut self.item_func,
-            acc: self.acc.clone(),
+            mk_acc: &mut self.mk_acc,
             range: self.range.clone(),
         }
         .parse_once(input)
     }
 }
 
-impl<R, A, Fs, Fp, S, P, I, E> Parse<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
+impl<R, A, MkA, Fs, Fp, S, P, I, E> Parse<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
 where
-    A: Clone,
+    MkA: Fn() -> A,
     I: Clone,
     E: ParseError<I>,
     S: Parse<I, E>,
@@ -143,7 +144,7 @@ where
             item: self.item.by_ref(),
             sep_func: &self.sep_func,
             item_func: &self.item_func,
-            acc: self.acc.clone(),
+            mk_acc: &self.mk_acc,
             range: self.range.clone(),
         }
         .parse_once(input)
@@ -171,7 +172,7 @@ where
                 collection.extend(Some(value));
                 collection
             },
-            acc: (self.collection)(),
+            mk_acc: self.collection,
             range: self.range,
         }
         .parse_once(input)
@@ -232,7 +233,7 @@ fn test() {
         range: 2..=3,
         item_func: |(i, s), _| (i + 1, s),
         sep_func: |(i, s), _| (i, s + 1),
-        acc: (0, 0),
+        mk_acc: || (0, 0),
     };
 
     ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,").unwrap_err();

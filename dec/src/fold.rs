@@ -5,55 +5,55 @@ use crate::try_fold::TryFold;
 
 use std::ops::{Bound, RangeBounds};
 
-pub fn fold<P, V, F>(parser: P, value: V, func: F) -> Fold<P, V, F> {
+pub fn fold<P, A, F>(mk_acc: A, parser: P, func: F) -> Fold<P, A, F> {
     Fold {
         parser,
-        value,
+        mk_acc,
         func,
     }
 }
 
-pub fn fold_exact<P, V, F>(
+pub fn fold_exact<P, A, F>(
     count: usize,
     parser: P,
-    value: V,
+    mk_acc: A,
     func: F,
-) -> FoldRange<P, V, F, std::ops::RangeInclusive<usize>> {
+) -> FoldRange<P, A, F, std::ops::RangeInclusive<usize>> {
     FoldRange {
         range: count..=count,
         parser,
-        value,
+        mk_acc,
         func,
     }
 }
 
-pub fn fold_range<R: RangeBounds<usize>, P, V, F>(
+pub fn fold_range<R: RangeBounds<usize>, P, A, F>(
     range: R,
     parser: P,
-    value: V,
+    mk_acc: A,
     func: F,
-) -> FoldRange<P, V, F, R> {
+) -> FoldRange<P, A, F, R> {
     FoldRange {
         range,
         parser,
-        value,
+        mk_acc,
         func,
     }
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Fold<P, V, F> {
+pub struct Fold<P, A, F> {
     pub parser: P,
-    pub value: V,
+    pub mk_acc: A,
     pub func: F,
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct FoldRange<P, V, F, R> {
+pub struct FoldRange<P, A, F, R> {
     pub parser: P,
-    pub value: V,
+    pub mk_acc: A,
     pub func: F,
     pub range: R,
 }
@@ -62,21 +62,26 @@ fn absurd<T>(x: std::convert::Infallible) -> T {
     match x {}
 }
 
-impl<P: ParseMut<I, E>, V, F: FnMut(V, P::Output) -> V, I: Clone, E: ParseError<I>> ParseOnce<I, E>
-    for Fold<P, V, F>
+impl<P, MkA, A, F, I, E> ParseOnce<I, E> for Fold<P, MkA, F>
+where
+    MkA: FnOnce() -> A,
+    P: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
-    type Output = V;
+    type Output = A;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             mut func,
         } = self;
 
         TryFold {
             parser,
-            value,
+            mk_acc,
             func: move |acc, value| Ok(func(acc, value)),
         }
         .parse_once(input)
@@ -84,38 +89,48 @@ impl<P: ParseMut<I, E>, V, F: FnMut(V, P::Output) -> V, I: Clone, E: ParseError<
     }
 }
 
-impl<P: ParseMut<I, E>, V: Clone, F: FnMut(V, P::Output) -> V, I: Clone, E: ParseError<I>>
-    ParseMut<I, E> for Fold<P, V, F>
+impl<P, MkA, A, F, I, E> ParseMut<I, E> for Fold<P, MkA, F>
+where
+    MkA: FnMut() -> A,
+    P: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
         } = self;
 
         Fold {
             parser: parser.by_mut(),
-            value: value.clone(),
+            mk_acc,
             func,
         }
         .parse_once(input)
     }
 }
 
-impl<P: Parse<I, E>, V: Clone, F: Fn(V, P::Output) -> V, I: Clone, E: ParseError<I>> Parse<I, E>
-    for Fold<P, V, F>
+impl<P, MkA, A, F, I, E> Parse<I, E> for Fold<P, MkA, F>
+where
+    MkA: Fn() -> A,
+    P: Parse<I, E>,
+    F: Fn(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
         } = self;
 
         Fold {
             parser: parser.by_ref(),
-            value: value.clone(),
+            mk_acc,
             func,
         }
         .parse_once(input)
@@ -146,21 +161,21 @@ fn copied(x: Bound<&usize>) -> Bound<usize> {
     }
 }
 
-impl<
-        R: RangeBounds<usize>,
-        P: ParseMut<I, E>,
-        V,
-        F: FnMut(V, P::Output) -> V,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseOnce<I, E> for FoldRange<P, V, F, R>
+impl<R, P, A, MkA, F, I, E> ParseOnce<I, E> for FoldRange<P, MkA, F, R>
+where
+    R: RangeBounds<usize>,
+    P: ParseMut<I, E>,
+    MkA: FnOnce() -> A,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
-    type Output = V;
+    type Output = A;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
-            value,
+            mk_acc,
             mut func,
             range,
         } = self;
@@ -175,7 +190,7 @@ impl<
         // fast track no-ops
         match end {
             Bound::Excluded(1) | Bound::Excluded(0) | Bound::Included(0) => {
-                return Ok((input, value))
+                return Ok((input, mk_acc()))
             }
             _ => (),
         }
@@ -191,7 +206,7 @@ impl<
             let func = &mut func;
             let (input, value) = TryFold {
                 parser: parser.by_mut(),
-                value,
+                mk_acc: mk_acc,
                 func: move |acc, value| {
                     let acc = func(acc, value);
                     *index += 1;
@@ -216,7 +231,7 @@ impl<
                 }
             }
         } else {
-            (input, value)
+            (input, mk_acc())
         };
 
         let is_done = match end {
@@ -241,7 +256,7 @@ impl<
         Map(
             TryFold {
                 parser,
-                value,
+                mk_acc: move || value,
                 func: move |acc, value| {
                     let acc = func(acc, value);
                     let is_done = match end {
@@ -271,26 +286,26 @@ impl<
     }
 }
 
-impl<
-        R: RangeBounds<usize> + Clone,
-        P: ParseMut<I, E>,
-        V: Clone,
-        F: FnMut(V, P::Output) -> V,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseMut<I, E> for FoldRange<P, V, F, R>
+impl<R, P, MkA, A, F, I, E> ParseMut<I, E> for FoldRange<P, MkA, F, R>
+where
+    R: RangeBounds<usize> + Clone,
+    P: ParseMut<I, E>,
+    MkA: FnMut() -> A,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
             range,
         } = self;
 
         FoldRange {
             parser: parser.by_mut(),
-            value: value.clone(),
+            mk_acc,
             func,
             range: range.clone(),
         }
@@ -298,26 +313,26 @@ impl<
     }
 }
 
-impl<
-        R: RangeBounds<usize> + Clone,
-        P: Parse<I, E>,
-        V: Clone,
-        F: Fn(V, P::Output) -> V,
-        I: Clone,
-        E: ParseError<I>,
-    > Parse<I, E> for FoldRange<P, V, F, R>
+impl<R, P, MkA, A, F, I, E> Parse<I, E> for FoldRange<P, MkA, F, R>
+where
+    R: RangeBounds<usize> + Clone,
+    P: Parse<I, E>,
+    MkA: Fn() -> A,
+    F: Fn(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
-            value,
+            mk_acc,
             func,
             range,
         } = self;
 
         FoldRange {
             parser: parser.by_ref(),
-            value: value.clone(),
+            mk_acc,
             func,
             range: range.clone(),
         }
@@ -335,7 +350,7 @@ mod test {
     fn foo() -> Result<(), Error<()>> {
         let parser = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: ..3,
         };
@@ -346,7 +361,7 @@ mod test {
 
         let parser = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: ..=2,
         };
@@ -365,7 +380,7 @@ mod test {
 
         let parser = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 2..,
         };
@@ -382,7 +397,7 @@ mod test {
 
         let parser = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 2..=4,
         };
@@ -403,7 +418,7 @@ mod test {
 
         let parser = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 4..=4,
         };
@@ -429,7 +444,7 @@ mod test {
     fn invalid_range() {
         let _: PResult<_, _, ()> = FoldRange {
             parser: Tag("."),
-            value: 0,
+            mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 4..=2,
         }

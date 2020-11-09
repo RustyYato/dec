@@ -3,11 +3,11 @@ use crate::prelude::*;
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct FoldUntil<P, Q, V, F> {
+pub struct FoldUntil<P, Q, A, F> {
     pub parser: P,
     pub stop: Q,
     pub func: F,
-    pub acc: V,
+    pub mk_acc: A,
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
@@ -18,30 +18,32 @@ pub struct Until<P, Q, C> {
     pub collection: C,
 }
 
-impl<
-        P: ParseMut<I, E>,
-        Q: ParseMut<I, E>,
-        F: FnMut(V, P::Output) -> V,
-        V,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseOnce<I, E> for FoldUntil<P, Q, V, F>
+impl<P, Q, MkA, A, F, I, E> ParseOnce<I, E> for FoldUntil<P, Q, MkA, F>
+where
+    MkA: FnOnce() -> A,
+    P: ParseMut<I, E>,
+    Q: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
-    type Output = (V, Q::Output);
+    type Output = (A, Q::Output);
 
     fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
             mut stop,
             mut func,
-            mut acc,
+            mk_acc,
         } = self;
+
+        let mut acc = mk_acc();
 
         loop {
             match stop.parse_mut(input.clone()) {
-                Ok((input, stop)) => return Ok((input, (acc, stop))),
                 Err(Error::Error(_)) => (),
                 Err(err @ Error::Failure(_)) => return Err(err),
+                Ok((input, stop)) => return Ok((input, (acc, stop))),
             }
 
             let (i, value) = parser.parse_mut(input)?;
@@ -52,55 +54,55 @@ impl<
     }
 }
 
-impl<
-        P: ParseMut<I, E>,
-        Q: ParseMut<I, E>,
-        F: FnMut(V, P::Output) -> V,
-        V: Clone,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseMut<I, E> for FoldUntil<P, Q, V, F>
+impl<P, Q, F, MkA, A, I, E> ParseMut<I, E> for FoldUntil<P, Q, MkA, F>
+where
+    MkA: FnMut() -> A,
+    P: ParseMut<I, E>,
+    Q: ParseMut<I, E>,
+    F: FnMut(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
             stop,
             func,
-            acc,
+            mk_acc,
         } = self;
 
         FoldUntil {
             parser: parser.by_mut(),
             stop: stop.by_mut(),
             func,
-            acc: acc.clone(),
+            mk_acc,
         }
         .parse_once(input)
     }
 }
 
-impl<
-        P: Parse<I, E>,
-        Q: Parse<I, E>,
-        F: Fn(V, P::Output) -> V,
-        V: Clone,
-        I: Clone,
-        E: ParseError<I>,
-    > Parse<I, E> for FoldUntil<P, Q, V, F>
+impl<P, Q, F, MkA, A, I, E> Parse<I, E> for FoldUntil<P, Q, MkA, F>
+where
+    MkA: Fn() -> A,
+    P: Parse<I, E>,
+    Q: Parse<I, E>,
+    F: Fn(A, P::Output) -> A,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
             parser,
             stop,
             func,
-            acc,
+            mk_acc,
         } = self;
 
         FoldUntil {
             parser: parser.by_ref(),
             stop: stop.by_ref(),
             func,
-            acc: acc.clone(),
+            mk_acc,
         }
         .parse_once(input)
     }
@@ -119,7 +121,7 @@ impl<
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         FoldUntil {
-            acc: (self.collection)(),
+            mk_acc: self.collection,
             func: crate::extend,
             parser: self.parser,
             stop: self.stop,

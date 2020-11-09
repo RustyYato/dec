@@ -57,7 +57,7 @@ impl<
             range,
             parser,
             func: crate::extend,
-            value: collection(),
+            mk_acc: collection,
         }
         .parse_once(input)
     }
