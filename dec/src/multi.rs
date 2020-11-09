@@ -40,11 +40,6 @@ pub fn irange<P, R: RangeBounds<usize>>(
     Range(range, parser, crate::Ignore)
 }
 
-fn extend<C: Extend<T>, T>(mut vec: C, item: T) -> C {
-    vec.extend(Some(item));
-    vec
-}
-
 impl<
         R: RangeBounds<usize>,
         F: FnOnce() -> C,
@@ -61,7 +56,7 @@ impl<
         FoldRange {
             range,
             parser,
-            func: extend,
+            func: crate::extend,
             value: collection(),
         }
         .parse_once(input)

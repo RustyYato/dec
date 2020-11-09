@@ -2,8 +2,6 @@ use crate::error::*;
 use crate::traits::*;
 use std::marker::PhantomData;
 
-type StdResult<T, E> = std::result::Result<T, E>;
-
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Map<P, F>(pub P, pub F);
@@ -94,7 +92,7 @@ pub struct TryMap<P, F>(pub P, pub F);
 
 impl<P: ParseOnce<I, E>, Output, F, I, E: ParseError<I>> ParseOnce<I, E> for TryMap<P, F>
 where
-    F: FnOnce(P::Output) -> StdResult<Output, E>,
+    F: FnOnce(P::Output) -> Result<Output, E>,
 {
     type Output = Output;
 
@@ -106,7 +104,7 @@ where
 
 impl<P: ParseMut<I, E>, Output, F, I, E: ParseError<I>> ParseMut<I, E> for TryMap<P, F>
 where
-    F: FnMut(P::Output) -> StdResult<Output, E>,
+    F: FnMut(P::Output) -> Result<Output, E>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
@@ -116,7 +114,7 @@ where
 
 impl<P: Parse<I, E>, Output, F, I, E: ParseError<I>> Parse<I, E> for TryMap<P, F>
 where
-    F: Fn(P::Output) -> StdResult<Output, E>,
+    F: Fn(P::Output) -> Result<Output, E>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
@@ -167,7 +165,7 @@ pub struct TryThen<P, F>(pub P, pub F);
 impl<P: ParseOnce<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> ParseOnce<I, E>
     for TryThen<P, F>
 where
-    F: FnOnce(P::Output) -> StdResult<Q, E>,
+    F: FnOnce(P::Output) -> Result<Q, E>,
 {
     type Output = Q::Output;
 
@@ -179,7 +177,7 @@ where
 
 impl<P: ParseMut<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> ParseMut<I, E> for TryThen<P, F>
 where
-    F: FnMut(P::Output) -> StdResult<Q, E>,
+    F: FnMut(P::Output) -> Result<Q, E>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse_mut(input)?;
@@ -189,7 +187,7 @@ where
 
 impl<P: Parse<I, E>, Q: ParseOnce<I, E>, F, I, E: ParseError<I>> Parse<I, E> for TryThen<P, F>
 where
-    F: Fn(P::Output) -> StdResult<Q, E>,
+    F: Fn(P::Output) -> Result<Q, E>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.parse(input)?;
