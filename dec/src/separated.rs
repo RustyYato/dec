@@ -3,8 +3,7 @@ use std::ops::RangeBounds;
 use crate::prelude::*;
 use crate::{error::*, traits::InputEq};
 
-use crate::multi::parse_bounds;
-use crate::seq::{All, Fold, FoldN, FoldRange};
+use crate::seq::{Fold, FoldRange};
 
 pub fn separated<R: std::ops::RangeBounds<usize>, S, P, O>(
     range: R,
@@ -64,58 +63,42 @@ where
 {
     type Output = A;
 
-    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E> {
-        let (start, end) = parse_bounds(self.range.start_bound(), self.range.end_bound());
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            mut sep,
+            mut item,
+            mut sep_func,
+            mut item_func,
+            acc,
+            range,
+        } = self;
 
-        if end == Some(0) {
-            return Ok((input, self.acc));
+        let mut do_sep = false;
+
+        FoldRange {
+            parser: move |input| {
+                let (input, sep) = if do_sep {
+                    let (input, value) = sep.parse_mut(input)?;
+                    (input, Some(value))
+                } else {
+                    do_sep = true;
+                    (input, None)
+                };
+
+                let (input, item) = item.parse_mut(input)?;
+
+                Ok((input, (sep, item)))
+            },
+            func: move |mut acc, (sep, item)| {
+                if let Some(sep) = sep {
+                    acc = sep_func(acc, sep);
+                }
+                item_func(acc, item)
+            },
+            value: acc,
+            range,
         }
-
-        let (mut item_func, mut sep_func) = (self.item_func, self.sep_func);
-
-        let (input, item) = self.item.parse_mut(input)?;
-        let acc = item_func(self.acc, item);
-
-        let mut func = move |acc, (sep, item)| item_func(sep_func(acc, sep), item);
-
-        let mut parser = All((self.sep, self.item));
-
-        let (start, end) = match (start, end) {
-            (Some(start), Some(end)) => (start.checked_sub(1), Some(Some(end - start))),
-            (None, Some(end)) => (None, Some(end.checked_sub(1))),
-            (Some(start), None) => (start.checked_sub(1), None),
-            (None, None) => (None, None),
-        };
-
-        let end = end.map(Option::unwrap_or_default);
-
-        let (input, acc) = match start.unwrap_or(0) {
-            0 => (input, acc),
-            s => FoldN {
-                value: acc,
-                parser: parser.by_mut(),
-                func: &mut func,
-                count: s,
-            }
-            .parse_once(input)?,
-        };
-
-        match end {
-            Some(0) => Ok((input, acc)),
-            Some(end) => FoldRange {
-                value: acc,
-                parser,
-                func,
-                range: ..=end,
-            }
-            .parse_once(input),
-            None => Fold {
-                value: acc,
-                parser,
-                func,
-            }
-            .parse_once(input),
-        }
+        .parse_once(input)
     }
 }
 
@@ -128,7 +111,7 @@ where
     P: ParseMut<I, E>,
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
-    R: RangeBounds<usize>,
+    R: RangeBounds<usize> + Clone,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedFoldRange {
@@ -137,7 +120,7 @@ where
             sep_func: &mut self.sep_func,
             item_func: &mut self.item_func,
             acc: self.acc.clone(),
-            range: (self.range.start_bound(), self.range.end_bound()),
+            range: self.range.clone(),
         }
         .parse_once(input)
     }
@@ -152,7 +135,7 @@ where
     P: Parse<I, E>,
     Fs: Fn(A, S::Output) -> A,
     Fp: Fn(A, P::Output) -> A,
-    R: RangeBounds<usize>,
+    R: RangeBounds<usize> + Clone,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedFoldRange {
@@ -161,7 +144,7 @@ where
             sep_func: &self.sep_func,
             item_func: &self.item_func,
             acc: self.acc.clone(),
-            range: (self.range.start_bound(), self.range.end_bound()),
+            range: self.range.clone(),
         }
         .parse_once(input)
     }
@@ -189,7 +172,7 @@ where
                 collection
             },
             acc: (self.collection)(),
-            range: (self.range.start_bound(), self.range.end_bound()),
+            range: self.range,
         }
         .parse_once(input)
     }
@@ -203,14 +186,14 @@ where
     P: ParseMut<I, E>,
     C: FnMut() -> A,
     A: Extend<P::Output>,
-    R: RangeBounds<usize>,
+    R: RangeBounds<usize> + Clone,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedRange {
             collection: &mut self.collection,
             item: self.item.by_mut(),
             sep: self.sep.by_mut(),
-            range: (self.range.start_bound(), self.range.end_bound()),
+            range: self.range.clone(),
         }
         .parse_once(input)
     }
@@ -224,14 +207,14 @@ where
     P: Parse<I, E>,
     C: Fn() -> A,
     A: Extend<P::Output>,
-    R: RangeBounds<usize>,
+    R: RangeBounds<usize> + Clone,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         SeparatedRange {
             collection: &self.collection,
             item: self.item.by_ref(),
             sep: self.sep.by_ref(),
-            range: (self.range.start_bound(), self.range.end_bound()),
+            range: self.range.clone(),
         }
         .parse_once(input)
     }

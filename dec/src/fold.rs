@@ -5,6 +5,42 @@ use crate::try_fold::TryFold;
 
 use std::ops::{Bound, RangeBounds};
 
+pub fn fold<P, V, F>(parser: P, value: V, func: F) -> Fold<P, V, F> {
+    Fold {
+        parser,
+        value,
+        func,
+    }
+}
+
+pub fn fold_exact<P, V, F>(
+    count: usize,
+    parser: P,
+    value: V,
+    func: F,
+) -> FoldRange<P, V, F, std::ops::RangeInclusive<usize>> {
+    FoldRange {
+        range: count..=count,
+        parser,
+        value,
+        func,
+    }
+}
+
+pub fn fold_range<R: RangeBounds<usize>, P, V, F>(
+    range: R,
+    parser: P,
+    value: V,
+    func: F,
+) -> FoldRange<P, V, F, R> {
+    FoldRange {
+        range,
+        parser,
+        value,
+        func,
+    }
+}
+
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Fold<P, V, F> {
