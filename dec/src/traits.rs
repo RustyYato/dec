@@ -1,4 +1,4 @@
-use crate::error::{DefaultError, ParseError, PResult};
+use crate::error::{DefaultError, PResult, ParseError};
 use crate::iter::Iter;
 
 pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {

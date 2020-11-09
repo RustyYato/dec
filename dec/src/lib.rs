@@ -47,7 +47,7 @@ pub mod seq {
 
     pub use _seq::{Fst, Mid, Snd};
     pub use all::All;
-    pub use fold::{fold, fold_range, Fold, FoldRange};
+    pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange};
     pub use multi::{imany0, imany1, irange, many0, many1, range, Range};
     pub use separated::{iseparated, separated, SeparatedFoldRange, SeparatedRange};
     pub use until::Until;

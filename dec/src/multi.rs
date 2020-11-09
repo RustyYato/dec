@@ -50,7 +50,7 @@ impl<
         F: FnOnce() -> C,
         C: Extend<P::Output>,
         P: ParseMut<I, E>,
-        I: InputEq + Clone,
+        I: Clone,
         E: ParseError<I>,
     > ParseOnce<I, E> for Range<R, P, F>
 {
@@ -73,7 +73,7 @@ impl<
         F: FnMut() -> C,
         C: Extend<P::Output>,
         P: ParseMut<I, E>,
-        I: InputEq + Clone,
+        I: Clone,
         E: ParseError<I>,
     > ParseMut<I, E> for Range<R, P, F>
 {
@@ -88,7 +88,7 @@ impl<
         F: Fn() -> C,
         C: Extend<P::Output>,
         P: Parse<I, E>,
-        I: InputEq + Clone,
+        I: Clone,
         E: ParseError<I>,
     > Parse<I, E> for Range<R, P, F>
 {

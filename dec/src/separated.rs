@@ -1,9 +1,9 @@
 use std::ops::RangeBounds;
 
+use crate::error::*;
 use crate::prelude::*;
-use crate::{error::*, traits::InputEq};
 
-use crate::seq::{Fold, FoldRange};
+use crate::seq::FoldRange;
 
 pub fn separated<R: std::ops::RangeBounds<usize>, S, P, O>(
     range: R,
@@ -53,7 +53,7 @@ pub struct SeparatedRange<R, S, P, C> {
 
 impl<R, A, Fs, Fp, S, P, I, E> ParseOnce<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
 where
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -105,7 +105,7 @@ where
 impl<R, A, Fs, Fp, S, P, I, E> ParseMut<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
 where
     A: Clone,
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -129,7 +129,7 @@ where
 impl<R, A, Fs, Fp, S, P, I, E> Parse<I, E> for SeparatedFoldRange<R, A, S, P, Fs, Fp>
 where
     A: Clone,
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: Parse<I, E>,
     P: Parse<I, E>,
@@ -152,7 +152,7 @@ where
 
 impl<R, S, P, C, I, E, A> ParseOnce<I, E> for SeparatedRange<R, S, P, C>
 where
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -180,7 +180,7 @@ where
 
 impl<R, S, P, C, I, E, A> ParseMut<I, E> for SeparatedRange<R, S, P, C>
 where
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -201,7 +201,7 @@ where
 
 impl<R, S, P, C, I, E, A> Parse<I, E> for SeparatedRange<R, S, P, C>
 where
-    I: InputEq + Clone,
+    I: Clone,
     E: ParseError<I>,
     S: Parse<I, E>,
     P: Parse<I, E>,
