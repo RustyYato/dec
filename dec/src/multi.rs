@@ -6,53 +6,85 @@ use std::ops::RangeBounds;
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Range<R, P, F>(pub R, pub P, pub F);
+pub struct Range<R, P, F> {
+    range: R,
+    parser: P,
+    collection: F,
+}
 
 pub fn many0<P, O>(parser: P) -> Range<std::ops::RangeFull, P, impl Copy + Fn() -> Vec<O>> {
-    Range(.., parser, Vec::new)
+    Range {
+        parser,
+        range: ..,
+        collection: Vec::new,
+    }
 }
 
 pub fn many1<P, O>(parser: P) -> Range<std::ops::RangeFrom<usize>, P, impl Copy + Fn() -> Vec<O>> {
-    Range(1.., parser, Vec::new)
+    Range {
+        parser,
+        range: 1..,
+        collection: Vec::new,
+    }
 }
 
 pub fn range<P, O, R: RangeBounds<usize>>(
     range: R,
     parser: P,
 ) -> Range<R, P, impl Copy + Fn() -> Vec<O>> {
-    Range(range, parser, Vec::new)
+    Range {
+        range,
+        parser,
+        collection: Vec::new,
+    }
 }
 
 pub fn imany0<P>(parser: P) -> Range<std::ops::RangeFull, P, impl Copy + Fn() -> crate::Ignore> {
-    Range(.., parser, crate::Ignore)
+    Range {
+        parser,
+        range: ..,
+        collection: crate::Ignore,
+    }
 }
 
 pub fn imany1<P>(
     parser: P,
 ) -> Range<std::ops::RangeFrom<usize>, P, impl Copy + Fn() -> crate::Ignore> {
-    Range(1.., parser, crate::Ignore)
+    Range {
+        parser,
+        range: 1..,
+        collection: crate::Ignore,
+    }
 }
 
 pub fn irange<P, R: RangeBounds<usize>>(
     range: R,
     parser: P,
 ) -> Range<R, P, impl Copy + Fn() -> crate::Ignore> {
-    Range(range, parser, crate::Ignore)
+    Range {
+        range,
+        parser,
+        collection: crate::Ignore,
+    }
 }
 
-impl<
-        R: RangeBounds<usize>,
-        F: FnOnce() -> C,
-        C: Extend<P::Output>,
-        P: ParseMut<I, E>,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseOnce<I, E> for Range<R, P, F>
+impl<R, F, C, P, I, E> ParseOnce<I, E> for Range<R, P, F>
+where
+    R: RangeBounds<usize>,
+    F: FnOnce() -> C,
+    C: Extend<P::Output>,
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
 {
     type Output = C;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        let Self(range, parser, collection) = self;
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
         FoldRange {
             range,
             parser,
@@ -63,33 +95,51 @@ impl<
     }
 }
 
-impl<
-        R: RangeBounds<usize> + Clone,
-        F: FnMut() -> C,
-        C: Extend<P::Output>,
-        P: ParseMut<I, E>,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseMut<I, E> for Range<R, P, F>
+impl<R, F, C, P, I, E> ParseMut<I, E> for Range<R, P, F>
+where
+    R: RangeBounds<usize> + Clone,
+    F: FnMut() -> C,
+    C: Extend<P::Output>,
+    P: ParseMut<I, E>,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        let Self(range, parser, collection) = self;
-        Range(range.clone(), parser.by_mut(), collection).parse_once(input)
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
+        Range {
+            range: range.clone(),
+            parser: parser.by_mut(),
+            collection,
+        }
+        .parse_once(input)
     }
 }
 
-impl<
-        R: RangeBounds<usize> + Clone,
-        F: Fn() -> C,
-        C: Extend<P::Output>,
-        P: Parse<I, E>,
-        I: Clone,
-        E: ParseError<I>,
-    > Parse<I, E> for Range<R, P, F>
+impl<R, F, C, P, I, E> Parse<I, E> for Range<R, P, F>
+where
+    R: RangeBounds<usize> + Clone,
+    F: Fn() -> C,
+    C: Extend<P::Output>,
+    P: Parse<I, E>,
+    I: Clone,
+    E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        let Self(range, parser, collection) = self;
-        Range(range.clone(), parser.by_ref(), collection).parse_once(input)
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
+        Range {
+            range: range.clone(),
+            parser: parser.by_ref(),
+            collection,
+        }
+        .parse_once(input)
     }
 }
 
@@ -99,39 +149,43 @@ mod test {
     use crate::tag::Tag;
 
     #[test]
-    fn range() {
-        let parser = Range(.., Tag('.'), Vec::new);
+    fn test_range() {
+        let parser = range(.., Tag('.'));
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser, "...input"),
             Ok(("input", vec!['.'; 3]))
         );
-        let parser = Range(..2, Tag('.'), Vec::new);
+        let parser = range(..2, Tag('.'));
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser, "...input"),
             Ok(("..input", vec!['.'; 1]))
         );
-        let parser = Range(..=2, Tag('.'), Vec::new);
+        let parser = range(..=2, Tag('.'));
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser, "...input"),
             Ok((".input", vec!['.'; 2]))
         );
-        let parser = Range(..2, Tag('.'), Vec::new);
+        let parser = range(..2, Tag('.'));
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser, ".input"),
             Ok(("input", vec!['.'; 1]))
         );
-        let parser = Range(2.., Tag('.'), Vec::new);
+        let parser = range(2.., Tag('.'));
         assert_eq!(
             ParseOnce::parse_once(parser, ".input"),
             Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
-        let parser = Range(2.., Tag('.'), Vec::new);
+        let parser = range(2.., Tag('.'));
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(parser, "..input"),
             Ok(("input", vec!['.'; 2]))
         );
 
-        let parser = Range(1..=3, Tag('.'), String::new);
+        let parser = Range {
+            range: 1..=3,
+            parser: Tag('.'),
+            collection: String::new,
+        };
         assert_eq!(
             ParseOnce::parse_once(parser.by_ref(), "input"),
             Err(Error::Error(("input", ErrorKind::RangeStart)))
