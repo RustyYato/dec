@@ -7,9 +7,9 @@ use std::ops::RangeBounds;
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Range<R, P, F> {
-    range: R,
-    parser: P,
-    collection: F,
+    pub range: R,
+    pub parser: P,
+    pub collection: F,
 }
 
 pub fn many0<P, O>(parser: P) -> Range<std::ops::RangeFull, P, impl Copy + Fn() -> Vec<O>> {
