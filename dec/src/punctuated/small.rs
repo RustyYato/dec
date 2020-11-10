@@ -1,50 +1,80 @@
-use std::{ops::RangeBounds, option, slice, vec};
+use smallvec::{Array, SmallVec};
+use std::fmt;
+use std::{cmp::Ordering, hash, ops::RangeBounds, option, slice};
 
-#[cfg(feature = "smallvec")]
-pub mod small;
+use super::Pair;
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Punctuated<V, P> {
-    inner: Vec<(V, P)>,
+pub struct SmallPunctuated<V, A: Array> {
+    inner: SmallVec<A>,
     last: Option<V>,
 }
 
-pub enum Pair<V, P> {
-    End(V),
-    Item(V, P),
-}
-
-impl<V, P> From<(V, P)> for Pair<V, P> {
-    fn from((value, punct): (V, P)) -> Self {
-        Self::Item(value, punct)
-    }
-}
-
-impl<V, P> Pair<V, P> {
-    pub fn from_ref(pair: &(V, P)) -> Pair<&V, &P> {
-        let (value, punct) = pair;
-        (value, punct).into()
-    }
-
-    pub fn from_mut(pair: &mut (V, P)) -> Pair<&mut V, &mut P> {
-        let (value, punct) = pair;
-        (value, punct).into()
-    }
-
-    pub fn into_value(self) -> V {
-        match self {
-            Self::End(value) | Self::Item(value, _) => value,
+impl<V, P, A: Array<Item = (V, P)>> Default for SmallPunctuated<V, A> {
+    fn default() -> Self {
+        Self {
+            inner: Default::default(),
+            last: Default::default(),
         }
     }
 }
 
-impl<V, P> From<V> for Pair<V, P> {
-    fn from(value: V) -> Self {
-        Self::End(value)
+impl<V: fmt::Debug, P: fmt::Debug, A: Array<Item = (V, P)>> fmt::Debug for SmallPunctuated<V, A> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SmallPunctuated")
+            .field("inner", &self.inner.as_slice())
+            .field("last", &self.last)
+            .finish()
     }
 }
 
-impl<V, P> Punctuated<V, P> {
+impl<V: Clone, P: Clone, A: Array<Item = (V, P)>> Clone for SmallPunctuated<V, A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            last: self.last.clone(),
+        }
+    }
+
+    fn clone_from(&mut self, other: &Self) {
+        self.inner.clone_from(&other.inner);
+        self.last.clone_from(&other.last);
+    }
+}
+
+impl<V: Eq, P: Eq, A: Array<Item = (V, P)>> Eq for SmallPunctuated<V, A> {}
+impl<V: PartialEq, P: PartialEq, A: Array<Item = (V, P)>> PartialEq for SmallPunctuated<V, A> {
+    fn eq(&self, other: &Self) -> bool {
+        self.last == other.last && self.inner == other.inner
+    }
+}
+
+impl<V: PartialOrd, P: PartialOrd, A: Array<Item = (V, P)>> PartialOrd for SmallPunctuated<V, A> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            self.inner
+                .partial_cmp(&other.inner)?
+                .then(self.last.partial_cmp(&self.last)?),
+        )
+    }
+}
+
+impl<V: Ord, P: Ord, A: Array<Item = (V, P)>> Ord for SmallPunctuated<V, A> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.inner.cmp(&other.inner).then(self.last.cmp(&self.last))
+    }
+}
+
+impl<V: hash::Hash, P: hash::Hash, A: Array<Item = (V, P)>> hash::Hash for SmallPunctuated<V, A> {
+    fn hash<H: hash::Hasher>(&self, other: &mut H) {
+        self.inner.hash(other);
+        self.last.hash(other);
+    }
+}
+
+impl<V, P, Arr> SmallPunctuated<V, Arr>
+where
+    Arr: Array<Item = (V, P)>,
+{
     pub fn parse<A, B>(
         punct: A,
         value: B,
@@ -71,12 +101,18 @@ impl<V, P> Punctuated<V, P> {
         impl Fn(Self, P) -> Self + Copy,
         impl Fn(Self, V) -> Self + Copy,
     > {
-        fn push_value<V, P>(mut this: Punctuated<V, P>, value: V) -> Punctuated<V, P> {
+        fn push_value<V, P, A: Array<Item = (V, P)>>(
+            mut this: SmallPunctuated<V, A>,
+            value: V,
+        ) -> SmallPunctuated<V, A> {
             this.push_value(value);
             this
         }
 
-        fn push_punct<V, P>(mut this: Punctuated<V, P>, punct: P) -> Punctuated<V, P> {
+        fn push_punct<V, P, A: Array<Item = (V, P)>>(
+            mut this: SmallPunctuated<V, A>,
+            punct: P,
+        ) -> SmallPunctuated<V, A> {
             this.push_punct(punct);
             this
         }
@@ -92,10 +128,7 @@ impl<V, P> Punctuated<V, P> {
     }
 
     pub fn new() -> Self {
-        Self {
-            inner: Vec::new(),
-            last: None,
-        }
+        Self::default()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -173,26 +206,38 @@ impl<V, P> Punctuated<V, P> {
         self.inner.len() + usize::from(self.last.is_some())
     }
 
-    pub fn first(&self) -> Option<&V> {
+    pub fn first<'a>(&'a self) -> Option<&V>
+    where
+        P: 'a,
+    {
         self.inner.first().map(|(x, _)| x).or(self.last.as_ref())
     }
 
-    pub fn first_mut(&mut self) -> Option<&mut V> {
+    pub fn first_mut<'a>(&'a mut self) -> Option<&mut V>
+    where
+        P: 'a,
+    {
         self.inner
             .first_mut()
             .map(|(x, _)| x)
             .or(self.last.as_mut())
     }
 
-    pub fn last(&self) -> Option<&V> {
+    pub fn last<'a>(&'a self) -> Option<&V>
+    where
+        P: 'a,
+    {
         self.last.as_ref().or(self.inner.last().map(|(x, _)| x))
     }
 
-    pub fn last_mut(&mut self) -> Option<&mut V> {
+    pub fn last_mut<'a>(&'a mut self) -> Option<&mut V>
+    where
+        P: 'a,
+    {
         self.last.as_mut().or(self.inner.last_mut().map(|(x, _)| x))
     }
 
-    pub fn into_pairs(self) -> IntoPairs<V, P> {
+    pub fn into_pairs(self) -> IntoPairs<V, Arr> {
         IntoPairs {
             inner: self.inner.into_iter(),
             last: self.last,
@@ -226,9 +271,8 @@ impl<V, P> Punctuated<V, P> {
     }
 }
 
-#[derive(Clone)]
-pub struct IntoPairs<V, P> {
-    inner: vec::IntoIter<(V, P)>,
+pub struct IntoPairs<V, A: Array> {
+    inner: smallvec::IntoIter<A>,
     last: Option<V>,
 }
 
@@ -242,9 +286,8 @@ pub struct Pairs<'a, V, P> {
     last: option::Iter<'a, V>,
 }
 
-#[derive(Clone)]
-pub struct IntoIter<V, P> {
-    inner: IntoPairs<V, P>,
+pub struct IntoIter<V, A: Array> {
+    inner: IntoPairs<V, A>,
 }
 
 pub struct IterMut<'a, V, P> {
@@ -255,8 +298,8 @@ pub struct Iter<'a, V, P> {
     inner: Pairs<'a, V, P>,
 }
 
-impl<V, P> IntoIterator for Punctuated<V, P> {
-    type IntoIter = IntoIter<V, P>;
+impl<V, P, Arr: Array<Item = (V, P)>> IntoIterator for SmallPunctuated<V, Arr> {
+    type IntoIter = IntoIter<V, Arr>;
     type Item = V;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -266,7 +309,7 @@ impl<V, P> IntoIterator for Punctuated<V, P> {
     }
 }
 
-impl<'a, V, P> IntoIterator for &'a mut Punctuated<V, P> {
+impl<'a, V, P: 'a, A: Array<Item = (V, P)>> IntoIterator for &'a mut SmallPunctuated<V, A> {
     type IntoIter = IterMut<'a, V, P>;
     type Item = &'a mut V;
 
@@ -275,12 +318,29 @@ impl<'a, V, P> IntoIterator for &'a mut Punctuated<V, P> {
     }
 }
 
-impl<'a, V, P> IntoIterator for &'a Punctuated<V, P> {
+impl<'a, V, P: 'a, A: Array<Item = (V, P)>> IntoIterator for &'a SmallPunctuated<V, A> {
     type IntoIter = Iter<'a, V, P>;
     type Item = &'a V;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<V: Clone, P: Clone, A: Clone + Array<Item = (V, P)>> Clone for IntoPairs<V, A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            last: self.last.clone(),
+        }
+    }
+}
+
+impl<V: Clone, P: Clone, A: Clone + Array<Item = (V, P)>> Clone for IntoIter<V, A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -301,7 +361,7 @@ impl<V, P> Clone for Iter<'_, V, P> {
     }
 }
 
-impl<V, P> Iterator for IntoPairs<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> Iterator for IntoPairs<V, A> {
     type Item = Pair<V, P>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -317,7 +377,7 @@ impl<V, P> Iterator for IntoPairs<V, P> {
     }
 }
 
-impl<V, P> DoubleEndedIterator for IntoPairs<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> DoubleEndedIterator for IntoPairs<V, A> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.last
             .take()
@@ -376,7 +436,7 @@ impl<V, P> DoubleEndedIterator for Pairs<'_, V, P> {
     }
 }
 
-impl<V, P> Iterator for IntoIter<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> Iterator for IntoIter<V, A> {
     type Item = V;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -388,7 +448,7 @@ impl<V, P> Iterator for IntoIter<V, P> {
     }
 }
 
-impl<V, P> DoubleEndedIterator for IntoIter<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> DoubleEndedIterator for IntoIter<V, A> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner.next_back().map(Pair::into_value)
     }
@@ -430,15 +490,15 @@ impl<V, P> DoubleEndedIterator for Iter<'_, V, P> {
     }
 }
 
-impl<V, P> std::iter::FromIterator<Pair<V, P>> for Punctuated<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> std::iter::FromIterator<Pair<V, P>> for SmallPunctuated<V, A> {
     fn from_iter<I: IntoIterator<Item = Pair<V, P>>>(iter: I) -> Self {
-        let mut punctuated = Self::new();
-        punctuated.extend(iter.into_iter());
-        punctuated
+        let mut this = Self::new();
+        this.extend(iter.into_iter());
+        this
     }
 }
 
-impl<V, P> Extend<Pair<V, P>> for Punctuated<V, P> {
+impl<V, P, A: Array<Item = (V, P)>> Extend<Pair<V, P>> for SmallPunctuated<V, A> {
     fn extend<I: IntoIterator<Item = Pair<V, P>>>(&mut self, iter: I) {
         assert!(self.last.is_none());
         let iter = iter.into_iter();
@@ -446,7 +506,7 @@ impl<V, P> Extend<Pair<V, P>> for Punctuated<V, P> {
         let mut nomore = false;
         iter.for_each(|pair| {
             if nomore {
-                panic!("Punctuated extended with items after a Pair::End");
+                panic!("SmallPunctuated extended with items after a Pair::End");
             }
             match pair {
                 Pair::Item(a, b) => self.inner.push((a, b)),
@@ -459,15 +519,15 @@ impl<V, P> Extend<Pair<V, P>> for Punctuated<V, P> {
     }
 }
 
-impl<V, P: Default> std::iter::FromIterator<V> for Punctuated<V, P> {
+impl<V, P: Default, A: Array<Item = (V, P)>> std::iter::FromIterator<V> for SmallPunctuated<V, A> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> Self {
-        let mut punctuated = Self::new();
-        punctuated.extend(iter.into_iter());
-        punctuated
+        let mut this = Self::new();
+        this.extend(iter.into_iter());
+        this
     }
 }
 
-impl<V, P: Default> Extend<V> for Punctuated<V, P> {
+impl<V, P: Default, A: Array<Item = (V, P)>> Extend<V> for SmallPunctuated<V, A> {
     fn extend<I: IntoIterator<Item = V>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
