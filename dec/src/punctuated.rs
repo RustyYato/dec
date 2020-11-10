@@ -45,7 +45,14 @@ impl<V, P> Punctuated<V, P> {
     pub fn parse<A, B>(
         punct: A,
         value: B,
-    ) -> crate::separated::SeparatedRange<std::ops::RangeFull, A, B, impl Fn() -> Self + Copy> {
+    ) -> crate::separated::SeparatedFoldRange<
+        std::ops::RangeFull,
+        impl Fn() -> Self + Copy,
+        A,
+        B,
+        impl Fn(Self, P) -> Self + Copy,
+        impl Fn(Self, V) -> Self + Copy,
+    > {
         Self::parse_range(.., punct, value)
     }
 
@@ -53,12 +60,31 @@ impl<V, P> Punctuated<V, P> {
         range: R,
         punct: A,
         value: B,
-    ) -> crate::separated::SeparatedRange<R, A, B, impl Fn() -> Self + Copy> {
-        crate::separated::SeparatedRange {
+    ) -> crate::separated::SeparatedFoldRange<
+        R,
+        impl Fn() -> Self + Copy,
+        A,
+        B,
+        impl Fn(Self, P) -> Self + Copy,
+        impl Fn(Self, V) -> Self + Copy,
+    > {
+        fn push_value<V, P>(mut this: Punctuated<V, P>, value: V) -> Punctuated<V, P> {
+            this.push_value(value);
+            this
+        }
+
+        fn push_punct<V, P>(mut this: Punctuated<V, P>, punct: P) -> Punctuated<V, P> {
+            this.push_punct(punct);
+            this
+        }
+
+        crate::separated::SeparatedFoldRange {
             range,
-            collection: Self::new,
+            mk_acc: Self::new,
             item: value,
             sep: punct,
+            item_func: push_value,
+            sep_func: push_punct,
         }
     }
 
