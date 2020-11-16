@@ -17,8 +17,7 @@ pub struct Indexed<I, P = DefaultPos> {
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Spanned<I, T, P = DefaultPos> {
     pub value: T,
-    pub span: Span<P>,
-    pub lexeme: I,
+    pub lexeme: Indexed<I, P>,
 }
 
 impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
@@ -52,7 +51,7 @@ impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
     }
 }
 
-pub trait Pos: Clone {
+pub trait Pos: Copy {
     fn inc(&mut self, inc: usize);
 }
 
@@ -74,6 +73,19 @@ impl<I, P: Pos> Indexed<I, P> {
     pub fn input(&self) -> &I {
         &self.input
     }
+
+    pub fn span(&self) -> Span<P>
+    where
+        I: InputSplit,
+    {
+        let mut end = self.pos;
+        end.inc(self.input.len());
+
+        Span {
+            start: self.pos,
+            end,
+        }
+    }
 }
 
 impl<I: InputSplit + Clone, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
@@ -81,31 +93,23 @@ impl<I: InputSplit + Clone, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T 
 
     fn compare(
         &self,
-        mut indexed_input: Indexed<I, P>,
+        indexed_input: Indexed<I, P>,
     ) -> (Indexed<I, P>, CompareResult<Self::Output>) {
-        let start = indexed_input.pos.clone();
         let len = indexed_input.input.len();
-
         let (input, result) = self.compare(indexed_input.input.clone());
 
         match result {
             CompareResult::Incomplete => (indexed_input, CompareResult::Incomplete),
             CompareResult::Error => (indexed_input, CompareResult::Error),
             CompareResult::Ok(value) => {
-                let lexeme_len = len - indexed_input.input.len();
-                indexed_input.pos.inc(lexeme_len);
-                let end = indexed_input.pos.clone();
-
-                let lexeme = indexed_input.input.cut(lexeme_len);
-
-                indexed_input.input = input;
+                let lexeme_len = len - input.len();
+                let lexeme = indexed_input.cut(lexeme_len);
                 (
-                    indexed_input,
-                    CompareResult::Ok(Spanned {
-                        span: Span { start, end },
-                        lexeme,
-                        value,
-                    }),
+                    Indexed {
+                        input,
+                        pos: lexeme.span().end,
+                    },
+                    CompareResult::Ok(Spanned { lexeme, value }),
                 )
             }
         }
