@@ -6,7 +6,7 @@ pub trait Spanned<P> {
     fn span(&self) -> Span<P>;
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span<P = DefaultPos> {
     start: P,
     end: P,
@@ -16,6 +16,19 @@ pub struct Span<P = DefaultPos> {
 pub struct Indexed<I, P = DefaultPos> {
     inner: I,
     pos: P,
+}
+
+use std::fmt;
+impl<P: fmt::Debug> fmt::Debug for Span<P> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}..{:?}", self.start, self.end)
+    }
+}
+
+impl<P: fmt::Display> fmt::Display for Span<P> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}..{}", self.start, self.end)
+    }
 }
 
 impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
