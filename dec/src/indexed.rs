@@ -1,4 +1,4 @@
-use crate::traits::{Compare, CompareResult, InputSplit};
+use crate::traits::{Compare, CompareResult, InputEq, InputSplit};
 
 type DefaultPos = u32;
 
@@ -19,6 +19,37 @@ pub struct Spanned<I, T, P = DefaultPos> {
     pub value: T,
     pub span: Span<P>,
     pub lexeme: I,
+}
+
+impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
+    fn eq(&self, other: &Self) -> bool {
+        self.pos == other.pos && self.input.eq(&other.input)
+    }
+}
+
+impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
+    fn len(&self) -> usize {
+        self.input.len()
+    }
+
+    fn cut(mut self, at: usize) -> Self {
+        self.input = self.input.cut(at);
+        self
+    }
+
+    fn advance(mut self, at: usize) -> std::result::Result<Self, Self> {
+        match self.input.advance(at) {
+            Ok(input) => {
+                self.input = input;
+                self.pos.inc(at);
+                Ok(self)
+            }
+            Err(input) => {
+                self.input = input;
+                Err(self)
+            }
+        }
+    }
 }
 
 pub trait Pos: Clone {
