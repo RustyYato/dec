@@ -2,6 +2,10 @@ use crate::traits::{Compare, CompareResult, InputEq, InputSplit};
 
 type DefaultPos = u32;
 
+pub trait Spanned<P> {
+    fn span(&self) -> Span<P>;
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span<P = DefaultPos> {
     start: P,
@@ -10,41 +14,35 @@ pub struct Span<P = DefaultPos> {
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Indexed<I, P = DefaultPos> {
-    input: I,
+    inner: I,
     pos: P,
-}
-
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Spanned<I, T, P = DefaultPos> {
-    pub value: T,
-    pub lexeme: Indexed<I, P>,
 }
 
 impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
     fn eq(&self, other: &Self) -> bool {
-        self.pos == other.pos && self.input.eq(&other.input)
+        self.pos == other.pos && self.inner.eq(&other.inner)
     }
 }
 
 impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
     fn len(&self) -> usize {
-        self.input.len()
+        self.inner.len()
     }
 
     fn cut(mut self, at: usize) -> Self {
-        self.input = self.input.cut(at);
+        self.inner = self.inner.cut(at);
         self
     }
 
     fn advance(mut self, at: usize) -> std::result::Result<Self, Self> {
-        match self.input.advance(at) {
-            Ok(input) => {
-                self.input = input;
+        match self.inner.advance(at) {
+            Ok(inner) => {
+                self.inner = inner;
                 self.pos.inc(at);
                 Ok(self)
             }
-            Err(input) => {
-                self.input = input;
+            Err(inner) => {
+                self.inner = inner;
                 Err(self)
             }
         }
@@ -56,30 +54,29 @@ pub trait Pos: Copy {
 }
 
 impl<I, P: Pos + Default> Indexed<I, P> {
-    pub fn new(input: I) -> Self {
-        Self::with_pos(input, P::default())
+    pub fn new(inner: I) -> Self {
+        Self::with_pos(inner, P::default())
     }
 }
 
 impl<I, P: Pos> Indexed<I, P> {
-    pub fn with_pos(input: I, pos: P) -> Self {
-        Self { input, pos }
+    pub fn with_pos(inner: I, pos: P) -> Self {
+        Self { inner, pos }
     }
 
     pub fn pos(&self) -> P {
         self.pos.clone()
     }
 
-    pub fn input(&self) -> &I {
-        &self.input
+    pub fn inner(&self) -> &I {
+        &self.inner
     }
+}
 
-    pub fn span(&self) -> Span<P>
-    where
-        I: InputSplit,
-    {
+impl<I: InputSplit, P: Pos> Spanned<P> for Indexed<I, P> {
+    fn span(&self) -> Span<P> {
         let mut end = self.pos;
-        end.inc(self.input.len());
+        end.inc(self.inner.len());
 
         Span {
             start: self.pos,
@@ -88,29 +85,31 @@ impl<I, P: Pos> Indexed<I, P> {
     }
 }
 
-impl<I: InputSplit + Clone, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
-    type Output = Spanned<I, T::Output, P>;
+impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
+    fn span(&self) -> Span<P> {
+        self.0.span()
+    }
+}
+
+impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
+    type Output = T::Output;
 
     fn compare(
         &self,
-        indexed_input: Indexed<I, P>,
+        mut indexed_input: Indexed<I, P>,
     ) -> (Indexed<I, P>, CompareResult<Self::Output>) {
-        let len = indexed_input.input.len();
-        let (input, result) = self.compare(indexed_input.input.clone());
+        let len = indexed_input.inner.len();
+        let (input, result) = self.compare(indexed_input.inner);
+        indexed_input.inner = input;
 
         match result {
             CompareResult::Incomplete => (indexed_input, CompareResult::Incomplete),
             CompareResult::Error => (indexed_input, CompareResult::Error),
             CompareResult::Ok(value) => {
-                let lexeme_len = len - input.len();
-                let lexeme = indexed_input.cut(lexeme_len);
-                (
-                    Indexed {
-                        input,
-                        pos: lexeme.span().end,
-                    },
-                    CompareResult::Ok(Spanned { lexeme, value }),
-                )
+                let lexeme_len = len - indexed_input.inner.len();
+                indexed_input.pos.inc(lexeme_len);
+
+                (indexed_input, CompareResult::Ok(value))
             }
         }
     }
