@@ -52,6 +52,7 @@ macro_rules! impl_tuple_fold {
                 $(<$ident as ParseOnce<Input, Error>>::Output,)*
             );
 
+            #[inline]
             #[allow(unused_mut, non_snake_case)]
             fn parse_once(self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
@@ -68,6 +69,7 @@ macro_rules! impl_tuple_fold {
             $i: ParseMut<Input, Error>
             $(, $ident: ParseMut<Input, Error>)*
         {
+            #[inline]
             #[allow(unused_mut, non_snake_case)]
             fn parse_mut(&mut self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
@@ -84,6 +86,7 @@ macro_rules! impl_tuple_fold {
             $i: Parse<Input, Error>
             $(, $ident: Parse<Input, Error>)*
         {
+            #[inline]
             #[allow(unused_mut, non_snake_case)]
             fn parse(&self, input: Input) -> PResult<Input, Self::Output, Error> {
                 let ($i, $($ident,)*) = self;
