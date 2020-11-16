@@ -1,4 +1,5 @@
 use crate::traits::{Compare, CompareResult, InputEq, InputSplit};
+use core::ops::Range as Span;
 
 type DefaultPos = u32;
 
@@ -6,29 +7,10 @@ pub trait Spanned<P> {
     fn span(&self) -> Span<P>;
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Span<P = DefaultPos> {
-    start: P,
-    end: P,
-}
-
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Indexed<I, P = DefaultPos> {
     inner: I,
     pos: P,
-}
-
-use std::fmt;
-impl<P: fmt::Debug> fmt::Debug for Span<P> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}..{:?}", self.start, self.end)
-    }
-}
-
-impl<P: fmt::Display> fmt::Display for Span<P> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}..{}", self.start, self.end)
-    }
 }
 
 impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
@@ -51,7 +33,7 @@ impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
         match self.inner.advance(at) {
             Ok(inner) => {
                 self.inner = inner;
-                self.pos.inc(at);
+                self.pos = self.pos.add(at);
                 Ok(self)
             }
             Err(inner) => {
@@ -63,7 +45,7 @@ impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
 }
 
 pub trait Pos: Copy {
-    fn inc(&mut self, inc: usize);
+    fn add(self, inc: usize) -> Self;
 }
 
 impl<I, P: Pos + Default> Indexed<I, P> {
@@ -88,12 +70,9 @@ impl<I, P: Pos> Indexed<I, P> {
 
 impl<I: InputSplit, P: Pos> Spanned<P> for Indexed<I, P> {
     fn span(&self) -> Span<P> {
-        let mut end = self.pos;
-        end.inc(self.inner.len());
-
         Span {
             start: self.pos,
-            end,
+            end: self.pos.add(self.inner.len()),
         }
     }
 }
@@ -120,7 +99,7 @@ impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
             CompareResult::Error => (indexed_input, CompareResult::Error),
             CompareResult::Ok(value) => {
                 let lexeme_len = len - indexed_input.inner.len();
-                indexed_input.pos.inc(lexeme_len);
+                indexed_input.pos = indexed_input.pos.add(lexeme_len);
 
                 (indexed_input, CompareResult::Ok(value))
             }
@@ -128,38 +107,26 @@ impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
     }
 }
 
-impl Pos for u8 {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
+macro_rules! imp_pos {
+    ($($type:ty),*) => {$(
+        impl Pos for $type {
+            fn add(self, inc: usize) -> Self {
+                #[cfg(debug_assertions)]
+                use std::convert::TryFrom;
+                #[cfg(debug_assertions)]
+                if let Ok(remaining) = usize::try_from(<$type>::MAX - self) {
+                    assert!(
+                        remaining >= inc,
+                        concat!("tried to add {} to {}, but this would overflow ", stringify!($type)),
+                        inc,
+                        self
+                    );
+                }
+
+                self.wrapping_add(inc as $type)
+            }
+        }
+    )*};
 }
 
-impl Pos for u16 {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
-}
-
-impl Pos for u32 {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
-}
-
-impl Pos for u64 {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
-}
-
-impl Pos for u128 {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
-}
-
-impl Pos for usize {
-    fn inc(&mut self, inc: usize) {
-        *self = (*self as usize + inc) as _;
-    }
-}
+imp_pos!(u8, u16, u32, u64, u128, usize);
