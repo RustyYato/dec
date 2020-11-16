@@ -23,6 +23,7 @@ mod verify;
 
 pub mod bits;
 pub mod ext;
+pub mod indexed;
 pub mod punctuated;
 
 pub mod error;
