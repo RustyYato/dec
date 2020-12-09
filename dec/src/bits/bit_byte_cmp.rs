@@ -1,15 +1,15 @@
 use super::*;
 
-use crate::traits::{Compare, CompareResult};
+use crate::traits::Compare;
 
 impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [u8] {
-    type Output = &'i [u8];
+    type Output = ();
 
-    fn compare(&self, mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<Self::Output>) {
         if input.bit_index == 0 {
             let (bytes, output) = self.compare(input.bytes);
             input.bytes = bytes;
-            (input, output.map(|_| *self))
+            (input, output.map(drop))
         } else {
             let old_input = input;
             let mut s_bytes = self.iter();
@@ -24,25 +24,25 @@ impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [u8] {
                 let ib = (ib0 << bit_index) | (ib1 >> (8 - bit_index));
 
                 if ib != sb {
-                    return (old_input, CompareResult::Error)
+                    return (old_input, None)
                 }
             }
 
             for _ in s_bytes {
-                return (old_input, CompareResult::Incomplete)
+                return (old_input, None)
             }
 
             input.bytes = &input.bytes[self.len()..];
 
-            (input, CompareResult::Ok(*self))
+            (input, Some(()))
         }
     }
 }
 
 impl<'a, 'i> Compare<Bits<&'a mut [u8]>> for &'i [u8] {
-    type Output = &'i [u8];
+    type Output = ();
 
-    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
         fix(input, *self, |s, i| (&s).compare(i))
     }
 }
@@ -67,7 +67,7 @@ mod test {
                     bytes: &[0b01011010][..],
                     bit_index: 4
                 },
-                &[0b1010_0000, 0b1111_0101][..]
+                ()
             ))
         );
     }

@@ -75,7 +75,7 @@ pub trait Parse<I, E: ParseError<I> = DefaultError<I>>: ParseMut<I, E> {
 pub trait Compare<I> {
     type Output;
 
-    fn compare(&self, input: I) -> (I, CompareResult<Self::Output>);
+    fn compare(&self, input: I) -> (I, Option<Self::Output>);
 }
 
 pub trait InputEq {
@@ -177,33 +177,5 @@ impl InputEq for &mut str {
         let o: &str = other;
 
         std::ptr::eq(s, o)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum CompareResult<T> {
-    Ok(T),
-    Error,
-    Incomplete,
-}
-
-impl<T> CompareResult<T> {
-    pub fn map<O>(self, f: impl FnOnce(T) -> O) -> CompareResult<O> {
-        match self {
-            CompareResult::Error => CompareResult::Error,
-            CompareResult::Incomplete => CompareResult::Incomplete,
-            CompareResult::Ok(output) => CompareResult::Ok(f(output)),
-        }
-    }
-
-    pub fn try_map_output<O>(self, f: impl FnOnce(T) -> Option<O>) -> CompareResult<O> {
-        match self {
-            CompareResult::Error => CompareResult::Error,
-            CompareResult::Incomplete => CompareResult::Incomplete,
-            CompareResult::Ok(output) => match f(output) {
-                None => CompareResult::Error,
-                Some(output) => CompareResult::Ok(output),
-            },
-        }
     }
 }

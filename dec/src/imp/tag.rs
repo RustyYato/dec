@@ -38,8 +38,8 @@ where
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         let (input, output) = self.0.compare(input);
         match output {
-            CompareResult::Ok(output) => Ok((input, output)),
-            _ => Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::Tag))),
+            Some(output) => Ok((input, output)),
+            None => Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::Tag))),
         }
     }
 }

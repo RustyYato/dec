@@ -1,11 +1,11 @@
 use super::*;
 
-use crate::traits::{Compare, CompareResult};
+use crate::traits::Compare;
 
 impl<'a> Compare<Bits<&'a [u8]>> for bool {
-    type Output = bool;
+    type Output = ();
 
-    fn compare(&self, mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<Self::Output>) {
         match input.bytes.get(0) {
             None => (),
             Some(&byte) => {
@@ -13,19 +13,19 @@ impl<'a> Compare<Bits<&'a [u8]>> for bool {
 
                 if bit == *self {
                     input.bit_index += 1;
-                    return (input, CompareResult::Ok(bit))
+                    return (input, Some(()))
                 }
             }
         }
 
-        (input, CompareResult::Error)
+        (input, None)
     }
 }
 
 impl<'a> Compare<Bits<&'a mut [u8]>> for bool {
-    type Output = bool;
+    type Output = ();
 
-    fn compare(&self, mut input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, mut input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
         match input.bytes.get(0) {
             None => (),
             Some(&byte) => {
@@ -33,21 +33,21 @@ impl<'a> Compare<Bits<&'a mut [u8]>> for bool {
 
                 if bit == *self {
                     input.bit_index += 1;
-                    return (input, CompareResult::Ok(bit))
+                    return (input, Some(()))
                 }
             }
         }
 
-        (input, CompareResult::Error)
+        (input, None)
     }
 }
 
-fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
+fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<()>) {
     let old_input = input;
     let mut s_bits = tag.iter();
 
     let byte = match input.bytes.get(0) {
-        None => return (old_input, CompareResult::Error),
+        None => return (old_input, None),
         Some(&byte) => byte,
     };
 
@@ -56,7 +56,7 @@ fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
         input.bit_index += 1;
 
         if bit != s_bit {
-            return (old_input, CompareResult::Error)
+            return (old_input, None)
         }
     }
 
@@ -67,7 +67,7 @@ fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
 
     if !s_bits.as_slice().is_empty() {
         let byte = match input.bytes.get(1) {
-            None => return (old_input, CompareResult::Incomplete),
+            None => return (old_input, None),
             Some(&byte) => byte,
         };
 
@@ -76,21 +76,21 @@ fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error)
+                return (old_input, None)
             }
         }
     }
 
-    (input, CompareResult::Ok(tag))
+    (input, Some(()))
 }
 
-fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
+fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<()>) {
     let old_input = input.clone();
     let mut s_bits = tag.iter();
 
     if input.bit_index != 0 {
         let byte = match input.bytes.get(0) {
-            None => return (old_input, CompareResult::Error),
+            None => return (old_input, None),
             Some(&byte) => byte,
         };
 
@@ -99,7 +99,7 @@ fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error)
+                return (old_input, None)
             }
         }
 
@@ -120,19 +120,19 @@ fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
         }
 
         if val != byte {
-            return (old_input, CompareResult::Error)
+            return (old_input, None)
         }
     }
 
     input.bytes = bytes.as_slice();
 
     for _ in s_bits {
-        return (old_input, CompareResult::Incomplete)
+        return (old_input, None)
     }
 
     if !last_chunk.is_empty() {
         let byte = match bytes.next() {
-            None => return (old_input, CompareResult::Incomplete),
+            None => return (old_input, None),
             Some(&byte) => byte,
         };
 
@@ -141,21 +141,21 @@ fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error)
+                return (old_input, None)
             }
         }
     }
 
-    (input, CompareResult::Ok(tag))
+    (input, Some(()))
 }
 
 impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [bool] {
-    type Output = &'i [bool];
+    type Output = ();
 
     #[inline]
-    fn compare(&self, input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<Self::Output>) {
         if self.len() == 0 {
-            return (input, CompareResult::Ok(*self))
+            return (input, Some(()))
         } else if self.len() < 8 {
             cmp_bits_small(*self, input)
         } else {
@@ -165,56 +165,50 @@ impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [bool] {
 }
 
 impl<'a, 'i> Compare<Bits<&'a mut [u8]>> for &'i [bool] {
-    type Output = &'i [bool];
+    type Output = ();
 
     #[inline]
-    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
         let (input, output) = fix(input, *self, |s, i| (&s).compare(i));
         (input, output)
     }
 }
 
 impl<'a> Compare<Bits<&'a [u8]>> for [bool; 1] {
-    type Output = [bool; 1];
+    type Output = ();
 
-    fn compare(&self, input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
-        let (input, output) = self[0].compare(input);
-        (input, output.map(|x| [x]))
-    }
+    fn compare(&self, input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, Option<Self::Output>) { self[0].compare(input) }
 }
 
 impl<'a> Compare<Bits<&'a mut [u8]>> for [bool; 1] {
-    type Output = [bool; 1];
+    type Output = ();
 
-    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
-        let (input, output) = self[0].compare(input);
-        (input, output.map(|x| [x]))
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
+        self[0].compare(input)
     }
 }
 
 macro_rules! small_bool_array {
     ($($lit:literal)*) => {$(
         impl<'a> Compare<Bits<&'a [u8]>> for [bool; $lit] {
-            type Output = [bool; $lit];
+            type Output = ();
 
             fn compare(
                 &self,
                 input: Bits<&'a [u8]>,
-            ) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
-                let (input, output) = cmp_bits_small(self, input);
-                (input, output.map(|_| *self))
+            ) -> (Bits<&'a [u8]>, Option<Self::Output>) {
+                cmp_bits_small(self, input)
             }
         }
 
         impl<'a> Compare<Bits<&'a mut [u8]>> for [bool; $lit] {
-            type Output = [bool; $lit];
+            type Output = ();
 
             fn compare(
                 &self,
                 input: Bits<&'a mut [u8]>,
-            ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
-                let (input, output) = fix(input, &self[..], cmp_bits_small);
-                (input, output.map(|_| *self))
+            ) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
+                fix(input, &self[..], cmp_bits_small)
             }
         }
     )*};
@@ -225,26 +219,24 @@ small_bool_array!(2 3 4 5 6 7 8);
 macro_rules! large_bool_array {
     ($($lit:literal)*) => {$(
         impl<'a> Compare<Bits<&'a [u8]>> for [bool; $lit] {
-            type Output = [bool; $lit];
+            type Output = ();
 
             fn compare(
                 &self,
                 input: Bits<&'a [u8]>,
-            ) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
-                let (input, output) = cmp_bits_large(self, input);
-                (input, output.map(|_| *self))
+            ) -> (Bits<&'a [u8]>, Option<Self::Output>) {
+                cmp_bits_large(self, input)
             }
         }
 
         impl<'a> Compare<Bits<&'a mut [u8]>> for [bool; $lit] {
-            type Output = [bool; $lit];
+            type Output = ();
 
             fn compare(
                 &self,
                 input: Bits<&'a mut [u8]>,
-            ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
-                let (input, output) = fix(input, &self[..], cmp_bits_large);
-                (input, output.map(|_| *self))
+            ) -> (Bits<&'a mut [u8]>, Option<Self::Output>) {
+                fix(input, &self[..], cmp_bits_large)
             }
         }
     )*};
@@ -271,7 +263,7 @@ mod test {
                     bytes: input_array,
                     bit_index: 2
                 },
-                [false, true]
+                ()
             ))
         );
 
@@ -309,7 +301,7 @@ mod test {
                     bytes: input_array,
                     bit_index: 6
                 },
-                [true, false]
+                ()
             ))
         );
 
@@ -323,7 +315,7 @@ mod test {
                     bytes: &[][..],
                     bit_index: 0
                 },
-                [true, false]
+                ()
             ))
         );
     }
@@ -347,7 +339,7 @@ mod test {
                     bytes: &[0b01011010][..],
                     bit_index: 4
                 },
-                tag
+                ()
             ))
         );
     }
@@ -372,7 +364,7 @@ mod test {
                     bytes: &mut [0b01011010][..],
                     bit_index: 4
                 },
-                tag
+                ()
             ))
         );
     }

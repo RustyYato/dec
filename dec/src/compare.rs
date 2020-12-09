@@ -1,28 +1,14 @@
 use crate::{tag::*, traits::*};
 
-fn slice_contains<T: PartialEq>(slice: &[T], item: &T) -> bool {
-    if slice.len() < 8 {
-        slice.iter().any(|x| x == item)
-    } else {
-        slice.contains(item)
-    }
-}
-
 impl<'i, T: PartialEq> Compare<&'i [T]> for [T] {
     type Output = &'i [T];
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at(min);
-                (input, CompareResult::Ok(output))
-            }
+    fn compare(&self, input: &'i [T]) -> (&'i [T], Option<Self::Output>) {
+        if input.get(..self.len()) == Some(self) {
+            let (output, input) = input.split_at(self.len());
+            (input, Some(output))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -30,22 +16,16 @@ impl<'i, T: PartialEq> Compare<&'i [T]> for [T] {
 impl<'i, T: PartialEq> Compare<&'i [T]> for &[T] {
     type Output = &'i [T];
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i [T]) -> (&'i [T], Option<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i, T: PartialEq> Compare<&'i [T]> for T {
     type Output = &'i T;
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i [T]) -> (&'i [T], Option<Self::Output>) {
         match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if output == self {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+            [output, input @ ..] if output == self => (input, Some(output)),
+            _ => (input, None),
         }
     }
 }
@@ -53,16 +33,10 @@ impl<'i, T: PartialEq> Compare<&'i [T]> for T {
 impl<'i, T: PartialEq> Compare<&'i [T]> for AnyOf<&[T]> {
     type Output = &'i T;
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i [T]) -> (&'i [T], Option<Self::Output>) {
         match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if slice_contains(self.0, output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+            [first, input @ ..] if self.0.contains(first) => (input, Some(first)),
+            _ => (input, None),
         }
     }
 }
@@ -70,35 +44,10 @@ impl<'i, T: PartialEq> Compare<&'i [T]> for AnyOf<&[T]> {
 impl<'i, T: PartialEq> Compare<&'i [T]> for NoneOf<&[T]> {
     type Output = &'i T;
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i [T]) -> (&'i [T], Option<Self::Output>) {
         match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if !slice_contains(self.0, output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
-        }
-    }
-}
-
-impl<'i> Compare<&'i str> for [u8] {
-    type Output = &'i [u8];
-
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min).map(str::as_bytes) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at(min);
-                (input, CompareResult::Ok(output.as_bytes()))
-            }
-        } else {
-            (input, CompareResult::Error)
+            [first, input @ ..] if !self.0.contains(first) => (input, Some(first)),
+            _ => (input, None),
         }
     }
 }
@@ -106,18 +55,12 @@ impl<'i> Compare<&'i str> for [u8] {
 impl<'i> Compare<&'i str> for str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at(min);
-                (input, CompareResult::Ok(output))
-            }
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
+        if input.get(..self.len()) == Some(self) {
+            let (output, input) = input.split_at(self.len());
+            (input, Some(output))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -125,39 +68,33 @@ impl<'i> Compare<&'i str> for str {
 impl<'i> Compare<&'i [u8]> for str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i [u8]) -> (&'i [u8], Option<Self::Output>) {
         let (input, output) = self.as_bytes().compare(input);
 
         (input, output.map(|v| unsafe { std::str::from_utf8_unchecked(v) }))
     }
 }
 
-impl<'i> Compare<&'i str> for &[u8] {
-    type Output = &'i [u8];
-
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) { (**self).compare(input) }
-}
-
 impl<'i> Compare<&'i str> for &str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i [u8]> for &str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i [u8]) -> (&'i [u8], Option<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i str> for u8 {
     type Output = u8;
 
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (unsafe { input.get_unchecked(1..) }, CompareResult::Ok(*self))
+            (unsafe { input.get_unchecked(1..) }, Some(*self))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -166,10 +103,30 @@ impl<'i> Compare<&'i str> for AnyOf<&[u8]> {
     type Output = u8;
 
     #[inline]
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
+        if !input.is_char_boundary(1) {
+            return (input, None)
+        }
+
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if slice_contains(self.0, &b) => (unsafe { input.get_unchecked(1..) }, CompareResult::Ok(b)),
-            _ => (input, CompareResult::Error),
+            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked(1..) }, Some(b)),
+            _ => (input, None),
+        }
+    }
+}
+
+impl<'i> Compare<&'i str> for NoneOf<&[u8]> {
+    type Output = u8;
+
+    #[inline]
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
+        if !input.is_char_boundary(1) {
+            return (input, None)
+        }
+
+        match input.get(..1).map(str::as_bytes) {
+            Some(&[b]) if !self.0.contains(&b) => (unsafe { input.get_unchecked(1..) }, Some(b)),
+            _ => (input, None),
         }
     }
 }
@@ -177,7 +134,7 @@ impl<'i> Compare<&'i str> for AnyOf<&[u8]> {
 impl<'i> Compare<&'i [u8]> for char {
     type Output = char;
 
-    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i [u8]) -> (&'i [u8], Option<Self::Output>) {
         let s = *self;
         let mut buf = [0; 4];
         let buf = self.encode_utf8(&mut buf).as_bytes();
@@ -186,41 +143,18 @@ impl<'i> Compare<&'i [u8]> for char {
     }
 }
 
-impl<'i> Compare<&'i [u8]> for AnyOf<&str> {
-    type Output = char;
-
-    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) {
-        for c in self.0.chars() {
-            let (i, c) = c.compare(input);
-
-            match c {
-                CompareResult::Ok(_) => return (i, c),
-                _ => (),
-            }
-        }
-
-        (input, CompareResult::Error)
-    }
-}
-
 impl<'i> Compare<&'i str> for char {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         let old_input = input;
-        let mut input = input.chars();
+        let mut input = old_input.chars();
         let c = input.next();
         let input = input.as_str();
         match c {
-            None => (old_input, CompareResult::Incomplete),
-            Some(output) => {
-                if output == *self {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (old_input, CompareResult::Error)
-                }
-            }
+            Some(output) if output == *self => (input, Some(output)),
+            _ => (old_input, None),
         }
     }
 }
@@ -229,25 +163,40 @@ impl<'i> Compare<&'i str> for AnyOf<&str> {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
             return (input, output.map(char::from))
         }
 
         let old_input = input;
-        let mut input = input.chars();
+        let mut input = old_input.chars();
         let c = input.next();
         let input = input.as_str();
         match c {
-            None => (old_input, CompareResult::Incomplete),
-            Some(output) => {
-                if self.0.contains(output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (old_input, CompareResult::Error)
-                }
-            }
+            Some(output) if self.0.contains(output) => (input, Some(output)),
+            _ => (old_input, None),
+        }
+    }
+}
+
+impl<'i> Compare<&'i str> for NoneOf<&str> {
+    type Output = char;
+
+    #[inline]
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
+        if self.0.is_ascii() {
+            let (input, output) = NoneOf(self.0.as_bytes()).compare(input);
+            return (input, output.map(char::from))
+        }
+
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        let input = input.as_str();
+        match c {
+            Some(output) if !self.0.contains(output) => (input, Some(output)),
+            _ => (old_input, None),
         }
     }
 }
@@ -256,20 +205,14 @@ impl<'i> Compare<&'i str> for AnyOf<&[char]> {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         let old_input = input;
-        let mut input = input.chars();
+        let mut input = old_input.chars();
         let c = input.next();
         let input = input.as_str();
         match c {
-            None => (old_input, CompareResult::Incomplete),
-            Some(output) => {
-                if self.0.contains(&output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (old_input, CompareResult::Error)
-                }
-            }
+            Some(output) if self.0.contains(&output) => (input, Some(output)),
+            _ => (old_input, None),
         }
     }
 }
@@ -278,20 +221,14 @@ impl<'i> Compare<&'i str> for NoneOf<&[char]> {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         let old_input = input;
-        let mut input = input.chars();
+        let mut input = old_input.chars();
         let c = input.next();
         let input = input.as_str();
         match c {
-            None => (old_input, CompareResult::Incomplete),
-            Some(output) => {
-                if !self.0.contains(&output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (old_input, CompareResult::Error)
-                }
-            }
+            Some(output) if !self.0.contains(&output) => (input, Some(output)),
+            _ => (old_input, None),
         }
     }
 }
@@ -299,18 +236,12 @@ impl<'i> Compare<&'i str> for NoneOf<&[char]> {
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for [T] {
     type Output = &'i mut [T];
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at_mut(min);
-                (input, CompareResult::Ok(output))
-            }
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], Option<Self::Output>) {
+        if input.get(..self.len()) == Some(self) {
+            let (output, input) = input.split_at_mut(self.len());
+            (input, Some(output))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -318,22 +249,18 @@ impl<'i, T: PartialEq> Compare<&'i mut [T]> for [T] {
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for &[T] {
     type Output = &'i mut [T];
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], Option<Self::Output>) { (**self).compare(input) }
 }
+
+unsafe fn unlink<'a, 'b, T: ?Sized>(x: &'a mut T) -> &'b mut T { &mut *(x as *mut T) }
 
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for T {
     type Output = &'i mut T;
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) {
-        match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if output == self {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], Option<Self::Output>) {
+        match unsafe { unlink(input) } {
+            [output, input @ ..] if output == self => (input, Some(output)),
+            _ => (input, None),
         }
     }
 }
@@ -341,16 +268,10 @@ impl<'i, T: PartialEq> Compare<&'i mut [T]> for T {
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for AnyOf<&[T]> {
     type Output = &'i mut T;
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) {
-        match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if slice_contains(self.0, output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], Option<Self::Output>) {
+        match unsafe { unlink(input) } {
+            [first, input @ ..] if self.0.contains(first) => (input, Some(first)),
+            _ => (input, None),
         }
     }
 }
@@ -358,35 +279,10 @@ impl<'i, T: PartialEq> Compare<&'i mut [T]> for AnyOf<&[T]> {
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for NoneOf<&[T]> {
     type Output = &'i mut T;
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) {
-        match input {
-            [] => (input, CompareResult::Incomplete),
-            [output, input @ ..] => {
-                if !slice_contains(self.0, output) {
-                    (input, CompareResult::Ok(output))
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
-        }
-    }
-}
-
-impl<'i> Compare<&'i mut str> for [u8] {
-    type Output = &'i [u8];
-
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min).map(str::as_bytes) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at_mut(min);
-                (input, CompareResult::Ok(output.as_bytes()))
-            }
-        } else {
-            (input, CompareResult::Error)
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], Option<Self::Output>) {
+        match unsafe { unlink(input) } {
+            [first, input @ ..] if !self.0.contains(first) => (input, Some(first)),
+            _ => (input, None),
         }
     }
 }
@@ -394,18 +290,12 @@ impl<'i> Compare<&'i mut str> for [u8] {
 impl<'i> Compare<&'i mut str> for str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        let min = self.len().min(input.len());
-
-        if self.get(..min) == input.get(..min) {
-            if self.len() > input.len() {
-                (input, CompareResult::Incomplete)
-            } else {
-                let (output, input) = input.split_at_mut(min);
-                (input, CompareResult::Ok(output))
-            }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        if input.get(..self.len()) == Some(self) {
+            let (output, input) = input.split_at_mut(self.len());
+            (input, Some(output))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -413,39 +303,33 @@ impl<'i> Compare<&'i mut str> for str {
 impl<'i> Compare<&'i mut [u8]> for str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], Option<Self::Output>) {
         let (input, output) = self.as_bytes().compare(input);
 
         (input, output.map(|v| unsafe { std::str::from_utf8_unchecked_mut(v) }))
     }
 }
 
-impl<'i> Compare<&'i mut str> for &[u8] {
-    type Output = &'i [u8];
-
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) { (**self).compare(input) }
-}
-
 impl<'i> Compare<&'i mut str> for &str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i mut [u8]> for &str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) { (**self).compare(input) }
+    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], Option<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i mut str> for u8 {
     type Output = u8;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (unsafe { input.get_unchecked_mut(1..) }, CompareResult::Ok(*self))
+            (unsafe { input.get_unchecked_mut(1..) }, Some(*self))
         } else {
-            (input, CompareResult::Error)
+            (input, None)
         }
     }
 }
@@ -454,10 +338,28 @@ impl<'i> Compare<&'i mut str> for AnyOf<&[u8]> {
     type Output = u8;
 
     #[inline]
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        if !input.is_char_boundary(1) {
+            return (input, None)
+        }
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if slice_contains(self.0, &b) => (unsafe { input.get_unchecked_mut(1..) }, CompareResult::Ok(b)),
-            _ => (input, CompareResult::Error),
+            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked_mut(1..) }, Some(b)),
+            _ => (input, None),
+        }
+    }
+}
+
+impl<'i> Compare<&'i mut str> for NoneOf<&[u8]> {
+    type Output = u8;
+
+    #[inline]
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        if !input.is_char_boundary(1) {
+            return (input, None)
+        }
+        match input.get(..1).map(str::as_bytes) {
+            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked_mut(1..) }, Some(b)),
+            _ => (input, None),
         }
     }
 }
@@ -465,7 +367,7 @@ impl<'i> Compare<&'i mut str> for AnyOf<&[u8]> {
 impl<'i> Compare<&'i mut [u8]> for char {
     type Output = char;
 
-    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) {
+    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], Option<Self::Output>) {
         let s = *self;
         let mut buf = [0; 4];
         let buf = self.encode_utf8(&mut buf).as_bytes();
@@ -474,39 +376,20 @@ impl<'i> Compare<&'i mut [u8]> for char {
     }
 }
 
-impl<'i> Compare<&'i mut [u8]> for AnyOf<&str> {
-    type Output = char;
-
-    fn compare(&self, mut input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) {
-        for c in self.0.chars() {
-            let (i, c) = c.compare(input);
-
-            match c {
-                CompareResult::Ok(_) => return (i, c),
-                _ => input = i,
-            }
-        }
-
-        (input, CompareResult::Error)
-    }
-}
-
 impl<'i> Compare<&'i mut str> for char {
     type Output = char;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        match input.chars().next() {
-            None => (input, CompareResult::Incomplete),
-            Some(output) => {
-                if output == *self {
-                    (
-                        unsafe { input.get_unchecked_mut(output.len_utf8()..) },
-                        CompareResult::Ok(output),
-                    )
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+    #[inline]
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        match c {
+            Some(output) if output == *self => (
+                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
+                Some(output),
+            ),
+            _ => (old_input, None),
         }
     }
 }
@@ -514,24 +397,45 @@ impl<'i> Compare<&'i mut str> for char {
 impl<'i> Compare<&'i mut str> for AnyOf<&str> {
     type Output = char;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
+    #[inline]
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
             return (input, output.map(char::from))
         }
 
-        match input.chars().next() {
-            None => (input, CompareResult::Incomplete),
-            Some(output) => {
-                if self.0.contains(output) {
-                    (
-                        unsafe { input.get_unchecked_mut(output.len_utf8()..) },
-                        CompareResult::Ok(output),
-                    )
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        match c {
+            Some(output) if self.0.contains(output) => (
+                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
+                Some(output),
+            ),
+            _ => (old_input, None),
+        }
+    }
+}
+
+impl<'i> Compare<&'i mut str> for NoneOf<&str> {
+    type Output = char;
+
+    #[inline]
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        if self.0.is_ascii() {
+            let (input, output) = NoneOf(self.0.as_bytes()).compare(input);
+            return (input, output.map(char::from))
+        }
+
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        match c {
+            Some(output) if !self.0.contains(output) => (
+                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
+                Some(output),
+            ),
+            _ => (old_input, None),
         }
     }
 }
@@ -540,19 +444,16 @@ impl<'i> Compare<&'i mut str> for AnyOf<&[char]> {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        match input.chars().next() {
-            None => (input, CompareResult::Incomplete),
-            Some(output) => {
-                if self.0.contains(&output) {
-                    (
-                        unsafe { input.get_unchecked_mut(output.len_utf8()..) },
-                        CompareResult::Ok(output),
-                    )
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        match c {
+            Some(output) if self.0.contains(&output) => (
+                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
+                Some(output),
+            ),
+            _ => (old_input, None),
         }
     }
 }
@@ -561,19 +462,16 @@ impl<'i> Compare<&'i mut str> for NoneOf<&[char]> {
     type Output = char;
 
     #[inline]
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        match input.chars().next() {
-            None => (input, CompareResult::Incomplete),
-            Some(output) => {
-                if !self.0.contains(&output) {
-                    (
-                        unsafe { input.get_unchecked_mut(output.len_utf8()..) },
-                        CompareResult::Ok(output),
-                    )
-                } else {
-                    (input, CompareResult::Error)
-                }
-            }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
+        let old_input = input;
+        let mut input = old_input.chars();
+        let c = input.next();
+        match c {
+            Some(output) if !self.0.contains(&output) => (
+                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
+                Some(output),
+            ),
+            _ => (old_input, None),
         }
     }
 }

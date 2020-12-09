@@ -1,4 +1,4 @@
-use crate::traits::{CompareResult, InputSplit};
+use crate::traits::InputSplit;
 
 mod bit_bool_cmp;
 mod bit_byte_cmp;
@@ -79,9 +79,9 @@ impl<B: InputSplit> InputSplit for Bits<B> {
     }
 }
 
-fn fix<T, F>(mut input: Bits<&mut [u8]>, value: T, f: F) -> (Bits<&mut [u8]>, CompareResult<T>)
+fn fix<T, U, F>(mut input: Bits<&mut [u8]>, value: T, f: F) -> (Bits<&mut [u8]>, Option<U>)
 where
-    F: FnOnce(T, Bits<&[u8]>) -> (Bits<&[u8]>, CompareResult<T>),
+    F: FnOnce(T, Bits<&[u8]>) -> (Bits<&[u8]>, Option<U>),
 {
     let (i, output) = f(value, Bits {
         bytes: &*input.bytes,

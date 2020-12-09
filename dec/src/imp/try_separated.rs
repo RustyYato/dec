@@ -47,28 +47,19 @@ where
 {
     fn mk_acc<T>(value: T) -> impl FnOnce() -> T { move || value }
 
-    let mut do_sep = false;
+    let (input, value) = item.parse_mut(input)?;
+    let acc = match item_func(acc, value) {
+        Ok(acc) => acc,
+        Err(e) => return Ok((input, Err(e))),
+    };
 
     crate::imp::try_fold::TryFold {
         parser: move |input| {
-            let (input, sep) = if do_sep {
-                let (input, value) = sep.parse_mut(input)?;
-                (input, Some(value))
-            } else {
-                do_sep = true;
-                (input, None)
-            };
-
+            let (input, sep) = sep.parse_mut(input)?;
             let (input, item) = item.parse_mut(input)?;
-
             Ok((input, (sep, item)))
         },
-        func: move |mut acc, (sep, item)| {
-            if let Some(sep) = sep {
-                acc = sep_func(acc, sep)?;
-            }
-            item_func(acc, item)
-        },
+        func: move |acc, (sep, item)| item_func(sep_func(acc, sep)?, item),
         mk_acc: mk_acc(acc),
     }
     .parse_once(input)

@@ -1,4 +1,4 @@
-use crate::traits::{Compare, CompareResult, InputEq, InputSplit};
+use crate::traits::{Compare, InputEq, InputSplit};
 use core::ops::Range as Span;
 
 type DefaultPos = u32;
@@ -72,19 +72,18 @@ impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
 impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
     type Output = T::Output;
 
-    fn compare(&self, mut indexed_input: Indexed<I, P>) -> (Indexed<I, P>, CompareResult<Self::Output>) {
+    fn compare(&self, mut indexed_input: Indexed<I, P>) -> (Indexed<I, P>, Option<Self::Output>) {
         let len = indexed_input.inner.len();
         let (input, result) = self.compare(indexed_input.inner);
         indexed_input.inner = input;
 
         match result {
-            CompareResult::Incomplete => (indexed_input, CompareResult::Incomplete),
-            CompareResult::Error => (indexed_input, CompareResult::Error),
-            CompareResult::Ok(value) => {
+            None => (indexed_input, None),
+            Some(value) => {
                 let lexeme_len = len - indexed_input.inner.len();
                 indexed_input.pos = indexed_input.pos.add(lexeme_len);
 
-                (indexed_input, CompareResult::Ok(value))
+                (indexed_input, Some(value))
             }
         }
     }
