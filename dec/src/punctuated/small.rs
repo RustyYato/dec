@@ -1,6 +1,5 @@
 use smallvec::{Array, SmallVec};
-use std::fmt;
-use std::{cmp::Ordering, hash, ops::RangeBounds, option, slice};
+use std::{cmp::Ordering, fmt, hash, ops::RangeBounds, option, slice};
 
 use super::Pair;
 
@@ -43,9 +42,7 @@ impl<V: Clone, P: Clone, A: Array<Item = (V, P)>> Clone for SmallPunctuated<V, A
 
 impl<V: Eq, P: Eq, A: Array<Item = (V, P)>> Eq for SmallPunctuated<V, A> {}
 impl<V: PartialEq, P: PartialEq, A: Array<Item = (V, P)>> PartialEq for SmallPunctuated<V, A> {
-    fn eq(&self, other: &Self) -> bool {
-        self.last == other.last && self.inner == other.inner
-    }
+    fn eq(&self, other: &Self) -> bool { self.last == other.last && self.inner == other.inner }
 }
 
 impl<V: PartialOrd, P: PartialOrd, A: Array<Item = (V, P)>> PartialOrd for SmallPunctuated<V, A> {
@@ -59,9 +56,7 @@ impl<V: PartialOrd, P: PartialOrd, A: Array<Item = (V, P)>> PartialOrd for Small
 }
 
 impl<V: Ord, P: Ord, A: Array<Item = (V, P)>> Ord for SmallPunctuated<V, A> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.inner.cmp(&other.inner).then(self.last.cmp(&self.last))
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.inner.cmp(&other.inner).then(self.last.cmp(&self.last)) }
 }
 
 impl<V: hash::Hash, P: hash::Hash, A: Array<Item = (V, P)>> hash::Hash for SmallPunctuated<V, A> {
@@ -127,17 +122,11 @@ where
         }
     }
 
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub fn new() -> Self { Self::default() }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
 
-    pub fn trailing_punct(&self) -> bool {
-        self.last.is_none() && !self.inner.is_empty()
-    }
+    pub fn trailing_punct(&self) -> bool { self.last.is_none() && !self.inner.is_empty() }
 
     pub fn clear(&mut self) {
         self.inner.clear();
@@ -146,11 +135,10 @@ where
 
     pub fn reserve(&mut self, additional: usize) {
         if self.last.is_none() && additional < 2 {
-            return;
+            return
         }
 
-        self.inner
-            .reserve(additional - usize::from(self.last.is_none()))
+        self.inner.reserve(additional - usize::from(self.last.is_none()))
     }
 
     pub fn push_value(&mut self, value: V) {
@@ -162,10 +150,7 @@ where
     }
 
     pub fn push_punct(&mut self, punct: P) {
-        let value = self
-            .last
-            .take()
-            .expect("The sequence must have a value in it");
+        let value = self.last.take().expect("The sequence must have a value in it");
         self.inner.push((value, punct));
     }
 
@@ -202,9 +187,7 @@ where
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.inner.len() + usize::from(self.last.is_some())
-    }
+    pub fn len(&self) -> usize { self.inner.len() + usize::from(self.last.is_some()) }
 
     pub fn first<'a>(&'a self) -> Option<&V>
     where
@@ -217,10 +200,7 @@ where
     where
         P: 'a,
     {
-        self.inner
-            .first_mut()
-            .map(|(x, _)| x)
-            .or(self.last.as_mut())
+        self.inner.first_mut().map(|(x, _)| x).or(self.last.as_mut())
     }
 
     pub fn last<'a>(&'a self) -> Option<&V>
@@ -264,11 +244,7 @@ where
         }
     }
 
-    pub fn iter(&self) -> Iter<V, P> {
-        Iter {
-            inner: self.pairs(),
-        }
-    }
+    pub fn iter(&self) -> Iter<V, P> { Iter { inner: self.pairs() } }
 }
 
 pub struct IntoPairs<V, A: Array> {
@@ -313,18 +289,14 @@ impl<'a, V, P: 'a, A: Array<Item = (V, P)>> IntoIterator for &'a mut SmallPunctu
     type IntoIter = IterMut<'a, V, P>;
     type Item = &'a mut V;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
 }
 
 impl<'a, V, P: 'a, A: Array<Item = (V, P)>> IntoIterator for &'a SmallPunctuated<V, A> {
     type IntoIter = Iter<'a, V, P>;
     type Item = &'a V;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
 impl<V: Clone, P: Clone, A: Clone + Array<Item = (V, P)>> Clone for IntoPairs<V, A> {
@@ -439,55 +411,37 @@ impl<V, P> DoubleEndedIterator for Pairs<'_, V, P> {
 impl<V, P, A: Array<Item = (V, P)>> Iterator for IntoIter<V, A> {
     type Item = V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P, A: Array<Item = (V, P)>> DoubleEndedIterator for IntoIter<V, A> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<'a, V, P> Iterator for IterMut<'a, V, P> {
     type Item = &'a mut V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P> DoubleEndedIterator for IterMut<'_, V, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<'a, V, P> Iterator for Iter<'a, V, P> {
     type Item = &'a V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P> DoubleEndedIterator for Iter<'_, V, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<V, P, A: Array<Item = (V, P)>> std::iter::FromIterator<Pair<V, P>> for SmallPunctuated<V, A> {

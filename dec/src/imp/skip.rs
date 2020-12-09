@@ -1,5 +1,4 @@
-use crate::prelude::*;
-use crate::{error::*, traits::InputSplit};
+use crate::{error::*, prelude::*, traits::InputSplit};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -12,9 +11,7 @@ where
 {
     type Output = ();
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        self.parse(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { self.parse(input) }
 }
 
 impl<I, E> ParseMut<I, E> for Skip
@@ -22,9 +19,7 @@ where
     I: InputSplit,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        self.parse(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { self.parse(input) }
 }
 
 impl<I, E> Parse<I, E> for Skip
@@ -35,10 +30,7 @@ where
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         match input.advance(self.0) {
             Ok(input) => Ok((input, ())),
-            Err(input) => Err(Error::Error(ParseError::from_input_kind(
-                input,
-                ErrorKind::Skip,
-            ))),
+            Err(input) => Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::Skip))),
         }
     }
 }

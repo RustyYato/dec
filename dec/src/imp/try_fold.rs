@@ -1,17 +1,11 @@
-use crate::error::ParseError;
-use crate::prelude::*;
-use crate::traits::*;
+use crate::{error::ParseError, prelude::*, traits::*};
 
 #[cfg(feature = "nightly")]
 mod nightly;
 #[cfg(not(feature = "nightly"))]
 mod stable;
 
-pub fn try_fold<P, A: Clone, F>(
-    acc: A,
-    parser: P,
-    func: F,
-) -> TryFold<P, impl Fn() -> A + Clone, F> {
+pub fn try_fold<P, A: Clone, F>(acc: A, parser: P, func: F) -> TryFold<P, impl Fn() -> A + Clone, F> {
     TryFold {
         parser,
         mk_acc: move || acc.clone(),

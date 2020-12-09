@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::traits::*;
+use crate::{error::*, traits::*};
 
 use crate::ext::{Mut, Ref};
 pub use crate::{map::Map, seq::All};
@@ -14,17 +13,11 @@ pub struct Snd<A, B>(pub A, pub B);
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Mid<A, B, C>(pub A, pub B, pub C);
 
-fn _fst<A, B>((a, _): (A, B)) -> A {
-    a
-}
+fn _fst<A, B>((a, _): (A, B)) -> A { a }
 
-fn _snd<A, B>((_, b): (A, B)) -> B {
-    b
-}
+fn _snd<A, B>((_, b): (A, B)) -> B { b }
 
-fn _mid<A, B, C>((_, b, _): (A, B, C)) -> B {
-    b
-}
+fn _mid<A, B, C>((_, b, _): (A, B, C)) -> B { b }
 
 impl<A, B, I, E> ParseOnce<I, E> for Fst<A, B>
 where
@@ -34,9 +27,7 @@ where
 {
     type Output = A::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((self.0, self.1)), _fst).parse_once(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { Map(All((self.0, self.1)), _fst).parse_once(input) }
 }
 
 impl<A, B, I, E> ParseMut<I, E> for Fst<A, B>
@@ -69,9 +60,7 @@ where
 {
     type Output = B::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((self.0, self.1)), _snd).parse_once(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { Map(All((self.0, self.1)), _snd).parse_once(input) }
 }
 
 impl<A, B, I, E> ParseMut<I, E> for Snd<A, B>
@@ -118,11 +107,7 @@ where
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Map(
-            All((self.0.by_mut(), self.1.by_mut(), self.2.by_mut())),
-            _mid,
-        )
-        .parse_once(input)
+        Map(All((self.0.by_mut(), self.1.by_mut(), self.2.by_mut())), _mid).parse_once(input)
     }
 }
 
@@ -134,10 +119,6 @@ where
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Map(
-            All((self.0.by_ref(), self.1.by_ref(), self.2.by_ref())),
-            _mid,
-        )
-        .parse_once(input)
+        Map(All((self.0.by_ref(), self.1.by_ref(), self.2.by_ref())), _mid).parse_once(input)
     }
 }

@@ -1,5 +1,4 @@
-use crate::tag::*;
-use crate::traits::*;
+use crate::{tag::*, traits::*};
 
 fn slice_contains<T: PartialEq>(slice: &[T], item: &T) -> bool {
     if slice.len() < 8 {
@@ -31,9 +30,7 @@ impl<'i, T: PartialEq> Compare<&'i [T]> for [T] {
 impl<'i, T: PartialEq> Compare<&'i [T]> for &[T] {
     type Output = &'i [T];
 
-    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i [T]) -> (&'i [T], CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i, T: PartialEq> Compare<&'i [T]> for T {
@@ -131,35 +128,26 @@ impl<'i> Compare<&'i [u8]> for str {
     fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) {
         let (input, output) = self.as_bytes().compare(input);
 
-        (
-            input,
-            output.map(|v| unsafe { std::str::from_utf8_unchecked(v) }),
-        )
+        (input, output.map(|v| unsafe { std::str::from_utf8_unchecked(v) }))
     }
 }
 
 impl<'i> Compare<&'i str> for &[u8] {
     type Output = &'i [u8];
 
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i str> for &str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i [u8]> for &str {
     type Output = &'i str;
 
-    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i [u8]) -> (&'i [u8], CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i str> for u8 {
@@ -167,10 +155,7 @@ impl<'i> Compare<&'i str> for u8 {
 
     fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (
-                unsafe { input.get_unchecked(1..) },
-                CompareResult::Ok(*self),
-            )
+            (unsafe { input.get_unchecked(1..) }, CompareResult::Ok(*self))
         } else {
             (input, CompareResult::Error)
         }
@@ -183,9 +168,7 @@ impl<'i> Compare<&'i str> for AnyOf<&[u8]> {
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if slice_contains(self.0, &b) => {
-                (unsafe { input.get_unchecked(1..) }, CompareResult::Ok(b))
-            }
+            Some(&[b]) if slice_contains(self.0, &b) => (unsafe { input.get_unchecked(1..) }, CompareResult::Ok(b)),
             _ => (input, CompareResult::Error),
         }
     }
@@ -249,7 +232,7 @@ impl<'i> Compare<&'i str> for AnyOf<&str> {
     fn compare(&self, input: &'i str) -> (&'i str, CompareResult<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from));
+            return (input, output.map(char::from))
         }
 
         let old_input = input;
@@ -335,9 +318,7 @@ impl<'i, T: PartialEq> Compare<&'i mut [T]> for [T] {
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for &[T] {
     type Output = &'i mut [T];
 
-    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i mut [T]) -> (&'i mut [T], CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i, T: PartialEq> Compare<&'i mut [T]> for T {
@@ -435,35 +416,26 @@ impl<'i> Compare<&'i mut [u8]> for str {
     fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) {
         let (input, output) = self.as_bytes().compare(input);
 
-        (
-            input,
-            output.map(|v| unsafe { std::str::from_utf8_unchecked_mut(v) }),
-        )
+        (input, output.map(|v| unsafe { std::str::from_utf8_unchecked_mut(v) }))
     }
 }
 
 impl<'i> Compare<&'i mut str> for &[u8] {
     type Output = &'i [u8];
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i mut str> for &str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i mut [u8]> for &str {
     type Output = &'i mut str;
 
-    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) {
-        (**self).compare(input)
-    }
+    fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], CompareResult<Self::Output>) { (**self).compare(input) }
 }
 
 impl<'i> Compare<&'i mut str> for u8 {
@@ -471,10 +443,7 @@ impl<'i> Compare<&'i mut str> for u8 {
 
     fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (
-                unsafe { input.get_unchecked_mut(1..) },
-                CompareResult::Ok(*self),
-            )
+            (unsafe { input.get_unchecked_mut(1..) }, CompareResult::Ok(*self))
         } else {
             (input, CompareResult::Error)
         }
@@ -487,10 +456,7 @@ impl<'i> Compare<&'i mut str> for AnyOf<&[u8]> {
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if slice_contains(self.0, &b) => (
-                unsafe { input.get_unchecked_mut(1..) },
-                CompareResult::Ok(b),
-            ),
+            Some(&[b]) if slice_contains(self.0, &b) => (unsafe { input.get_unchecked_mut(1..) }, CompareResult::Ok(b)),
             _ => (input, CompareResult::Error),
         }
     }
@@ -551,7 +517,7 @@ impl<'i> Compare<&'i mut str> for AnyOf<&str> {
     fn compare(&self, input: &'i mut str) -> (&'i mut str, CompareResult<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from));
+            return (input, output.map(char::from))
         }
 
         match input.chars().next() {

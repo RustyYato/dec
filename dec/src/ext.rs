@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::traits::*;
+use crate::{error::*, traits::*};
 
 cfg_match::cfg_match! {
     feature = "nightly" => {
@@ -58,9 +57,7 @@ pub struct Ref<'a, T: ?Sized>(pub &'a T);
 
 impl<T: ?Sized> Copy for Ref<'_, T> {}
 impl<T: ?Sized> Clone for Ref<'_, T> {
-    fn clone(&self) -> Self {
-        *self
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 cfg_match::cfg_match! {
@@ -111,39 +108,27 @@ cfg_match::cfg_match! {
 impl<T: ?Sized + ParseMut<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Mut<'_, T> {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse_mut(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { self.0.parse_mut(input) }
 }
 
 impl<T: ?Sized + ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Mut<'_, T> {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse_mut(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { self.0.parse_mut(input) }
 }
 
 impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Mut<'_, T> {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }
 
 impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Ref<'_, T> {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }
 
 impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Ref<'_, T> {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }
 
 impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Ref<'_, T> {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }

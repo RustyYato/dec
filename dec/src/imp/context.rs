@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -40,9 +39,7 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Context(self.0, self.1.by_ref()).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Context(self.0, self.1.by_ref()).parse_once(input) }
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
@@ -84,7 +81,5 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        AppendError(self.0, self.1.by_ref()).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { AppendError(self.0, self.1.by_ref()).parse_once(input) }
 }

@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -15,10 +14,7 @@ where
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         match self.0.parse_once(input.clone()) {
-            Ok(_) => Err(Error::Error(ParseError::from_input_kind(
-                input,
-                ErrorKind::Not,
-            ))),
+            Ok(_) => Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::Not))),
             Err(Error::Error(_)) => Ok((input, ())),
             Err(err) => Err(err),
         }
@@ -31,9 +27,7 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Not(self.0.by_mut()).parse_once(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Not(self.0.by_mut()).parse_once(input) }
 }
 
 impl<P, I, E> Parse<I, E> for Not<P>
@@ -42,7 +36,5 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Not(self.0.by_ref()).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Not(self.0.by_ref()).parse_once(input) }
 }

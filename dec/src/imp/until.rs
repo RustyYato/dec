@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -108,14 +107,8 @@ where
     }
 }
 
-impl<
-        P: ParseMut<I, E>,
-        Q: ParseMut<I, E>,
-        F: FnOnce() -> C,
-        C: Extend<P::Output>,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseOnce<I, E> for Until<P, Q, F>
+impl<P: ParseMut<I, E>, Q: ParseMut<I, E>, F: FnOnce() -> C, C: Extend<P::Output>, I: Clone, E: ParseError<I>>
+    ParseOnce<I, E> for Until<P, Q, F>
 {
     type Output = (C, Q::Output);
 
@@ -130,14 +123,8 @@ impl<
     }
 }
 
-impl<
-        P: ParseMut<I, E>,
-        Q: ParseMut<I, E>,
-        F: FnMut() -> C,
-        C: Extend<P::Output>,
-        I: Clone,
-        E: ParseError<I>,
-    > ParseMut<I, E> for Until<P, Q, F>
+impl<P: ParseMut<I, E>, Q: ParseMut<I, E>, F: FnMut() -> C, C: Extend<P::Output>, I: Clone, E: ParseError<I>>
+    ParseMut<I, E> for Until<P, Q, F>
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
         Until {
@@ -149,14 +136,8 @@ impl<
     }
 }
 
-impl<
-        P: Parse<I, E>,
-        Q: Parse<I, E>,
-        F: Fn() -> C,
-        C: Extend<P::Output>,
-        I: Clone,
-        E: ParseError<I>,
-    > Parse<I, E> for Until<P, Q, F>
+impl<P: Parse<I, E>, Q: Parse<I, E>, F: Fn() -> C, C: Extend<P::Output>, I: Clone, E: ParseError<I>> Parse<I, E>
+    for Until<P, Q, F>
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
         Until {

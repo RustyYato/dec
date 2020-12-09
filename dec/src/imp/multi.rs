@@ -1,6 +1,4 @@
-use crate::error::*;
-use crate::fold::FoldRange;
-use crate::traits::*;
+use crate::{error::*, fold::FoldRange, traits::*};
 
 use std::ops::RangeBounds;
 
@@ -28,10 +26,7 @@ pub fn many1<P, O>(parser: P) -> Range<std::ops::RangeFrom<usize>, P, impl Copy 
     }
 }
 
-pub fn range<P, O, R: RangeBounds<usize>>(
-    range: R,
-    parser: P,
-) -> Range<R, P, impl Copy + Fn() -> Vec<O>> {
+pub fn range<P, O, R: RangeBounds<usize>>(range: R, parser: P) -> Range<R, P, impl Copy + Fn() -> Vec<O>> {
     Range {
         range,
         parser,
@@ -47,9 +42,7 @@ pub fn imany0<P>(parser: P) -> Range<std::ops::RangeFull, P, impl Copy + Fn() ->
     }
 }
 
-pub fn imany1<P>(
-    parser: P,
-) -> Range<std::ops::RangeFrom<usize>, P, impl Copy + Fn() -> crate::Ignore> {
+pub fn imany1<P>(parser: P) -> Range<std::ops::RangeFrom<usize>, P, impl Copy + Fn() -> crate::Ignore> {
     Range {
         parser,
         range: 1..,
@@ -57,10 +50,7 @@ pub fn imany1<P>(
     }
 }
 
-pub fn irange<P, R: RangeBounds<usize>>(
-    range: R,
-    parser: P,
-) -> Range<R, P, impl Copy + Fn() -> crate::Ignore> {
+pub fn irange<P, R: RangeBounds<usize>>(range: R, parser: P) -> Range<R, P, impl Copy + Fn() -> crate::Ignore> {
     Range {
         range,
         parser,

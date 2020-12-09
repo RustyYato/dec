@@ -15,9 +15,7 @@ pub enum Pair<V, P> {
 }
 
 impl<V, P> From<(V, P)> for Pair<V, P> {
-    fn from((value, punct): (V, P)) -> Self {
-        Self::Item(value, punct)
-    }
+    fn from((value, punct): (V, P)) -> Self { Self::Item(value, punct) }
 }
 
 impl<V, P> Pair<V, P> {
@@ -39,9 +37,7 @@ impl<V, P> Pair<V, P> {
 }
 
 impl<V, P> From<V> for Pair<V, P> {
-    fn from(value: V) -> Self {
-        Self::End(value)
-    }
+    fn from(value: V) -> Self { Self::End(value) }
 }
 
 impl<V, P> Punctuated<V, P> {
@@ -98,13 +94,9 @@ impl<V, P> Punctuated<V, P> {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
 
-    pub fn trailing_punct(&self) -> bool {
-        self.last.is_none() && !self.inner.is_empty()
-    }
+    pub fn trailing_punct(&self) -> bool { self.last.is_none() && !self.inner.is_empty() }
 
     pub fn clear(&mut self) {
         self.inner.clear();
@@ -113,11 +105,10 @@ impl<V, P> Punctuated<V, P> {
 
     pub fn reserve(&mut self, additional: usize) {
         if self.last.is_none() && additional < 2 {
-            return;
+            return
         }
 
-        self.inner
-            .reserve(additional - usize::from(self.last.is_none()))
+        self.inner.reserve(additional - usize::from(self.last.is_none()))
     }
 
     pub fn push_value(&mut self, value: V) {
@@ -129,10 +120,7 @@ impl<V, P> Punctuated<V, P> {
     }
 
     pub fn push_punct(&mut self, punct: P) {
-        let value = self
-            .last
-            .take()
-            .expect("The sequence must have a value in it");
+        let value = self.last.take().expect("The sequence must have a value in it");
         self.inner.push((value, punct));
     }
 
@@ -169,28 +157,15 @@ impl<V, P> Punctuated<V, P> {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.inner.len() + usize::from(self.last.is_some())
-    }
+    pub fn len(&self) -> usize { self.inner.len() + usize::from(self.last.is_some()) }
 
-    pub fn first(&self) -> Option<&V> {
-        self.inner.first().map(|(x, _)| x).or(self.last.as_ref())
-    }
+    pub fn first(&self) -> Option<&V> { self.inner.first().map(|(x, _)| x).or(self.last.as_ref()) }
 
-    pub fn first_mut(&mut self) -> Option<&mut V> {
-        self.inner
-            .first_mut()
-            .map(|(x, _)| x)
-            .or(self.last.as_mut())
-    }
+    pub fn first_mut(&mut self) -> Option<&mut V> { self.inner.first_mut().map(|(x, _)| x).or(self.last.as_mut()) }
 
-    pub fn last(&self) -> Option<&V> {
-        self.last.as_ref().or(self.inner.last().map(|(x, _)| x))
-    }
+    pub fn last(&self) -> Option<&V> { self.last.as_ref().or(self.inner.last().map(|(x, _)| x)) }
 
-    pub fn last_mut(&mut self) -> Option<&mut V> {
-        self.last.as_mut().or(self.inner.last_mut().map(|(x, _)| x))
-    }
+    pub fn last_mut(&mut self) -> Option<&mut V> { self.last.as_mut().or(self.inner.last_mut().map(|(x, _)| x)) }
 
     pub fn into_pairs(self) -> IntoPairs<V, P> {
         IntoPairs {
@@ -219,11 +194,7 @@ impl<V, P> Punctuated<V, P> {
         }
     }
 
-    pub fn iter(&self) -> Iter<V, P> {
-        Iter {
-            inner: self.pairs(),
-        }
-    }
+    pub fn iter(&self) -> Iter<V, P> { Iter { inner: self.pairs() } }
 }
 
 #[derive(Clone)]
@@ -270,18 +241,14 @@ impl<'a, V, P> IntoIterator for &'a mut Punctuated<V, P> {
     type IntoIter = IterMut<'a, V, P>;
     type Item = &'a mut V;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
 }
 
 impl<'a, V, P> IntoIterator for &'a Punctuated<V, P> {
     type IntoIter = Iter<'a, V, P>;
     type Item = &'a V;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.iter() }
 }
 
 impl<V, P> Clone for Pairs<'_, V, P> {
@@ -379,55 +346,37 @@ impl<V, P> DoubleEndedIterator for Pairs<'_, V, P> {
 impl<V, P> Iterator for IntoIter<V, P> {
     type Item = V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P> DoubleEndedIterator for IntoIter<V, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<'a, V, P> Iterator for IterMut<'a, V, P> {
     type Item = &'a mut V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P> DoubleEndedIterator for IterMut<'_, V, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<'a, V, P> Iterator for Iter<'a, V, P> {
     type Item = &'a V;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Pair::into_value)
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next().map(Pair::into_value) }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.inner.size_hint() }
 }
 
 impl<V, P> DoubleEndedIterator for Iter<'_, V, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Pair::into_value)
-    }
+    fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
 impl<V, P> std::iter::FromIterator<Pair<V, P>> for Punctuated<V, P> {

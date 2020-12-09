@@ -11,21 +11,11 @@ pub struct Bits<B> {
 }
 
 impl<'a> From<&'a [u8]> for Bits<&'a [u8]> {
-    fn from(bytes: &'a [u8]) -> Self {
-        Self {
-            bytes,
-            bit_index: 0,
-        }
-    }
+    fn from(bytes: &'a [u8]) -> Self { Self { bytes, bit_index: 0 } }
 }
 
 impl<'a> From<&'a mut [u8]> for Bits<&'a mut [u8]> {
-    fn from(bytes: &'a mut [u8]) -> Self {
-        Self {
-            bytes,
-            bit_index: 0,
-        }
-    }
+    fn from(bytes: &'a mut [u8]) -> Self { Self { bytes, bit_index: 0 } }
 }
 
 impl<'a> Bits<&'a [u8]> {
@@ -47,26 +37,16 @@ impl<'a> Bits<&'a mut [u8]> {
 }
 
 impl<B> Bits<B> {
-    pub fn bytes(&self) -> &B {
-        &self.bytes
-    }
+    pub fn bytes(&self) -> &B { &self.bytes }
 
-    pub fn bit_index(&self) -> u8 {
-        self.bit_index
-    }
+    pub fn bit_index(&self) -> u8 { self.bit_index }
 
-    pub fn into_bytes_index(self) -> (B, u8) {
-        (self.bytes, self.bit_index)
-    }
+    pub fn into_bytes_index(self) -> (B, u8) { (self.bytes, self.bit_index) }
 }
 
 impl<B: InputSplit> InputSplit for Bits<B> {
     fn len(&self) -> usize {
-        self.bytes
-            .len()
-            .checked_mul(8)
-            .expect("bit length too large")
-            - usize::from(self.bit_index)
+        self.bytes.len().checked_mul(8).expect("bit length too large") - usize::from(self.bit_index)
     }
 
     fn cut(mut self, at: usize) -> Self {
@@ -103,13 +83,10 @@ fn fix<T, F>(mut input: Bits<&mut [u8]>, value: T, f: F) -> (Bits<&mut [u8]>, Co
 where
     F: FnOnce(T, Bits<&[u8]>) -> (Bits<&[u8]>, CompareResult<T>),
 {
-    let (i, output) = f(
-        value,
-        Bits {
-            bytes: &*input.bytes,
-            bit_index: input.bit_index,
-        },
-    );
+    let (i, output) = f(value, Bits {
+        bytes: &*input.bytes,
+        bit_index: input.bit_index,
+    });
 
     input.bit_index = i.bit_index;
     let len = input.bytes.len() - i.bytes.len();

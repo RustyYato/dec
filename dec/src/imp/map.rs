@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::traits::*;
+use crate::{error::*, traits::*};
 use std::marker::PhantomData;
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]

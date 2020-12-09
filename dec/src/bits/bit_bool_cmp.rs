@@ -13,7 +13,7 @@ impl<'a> Compare<Bits<&'a [u8]>> for bool {
 
                 if bit == *self {
                     input.bit_index += 1;
-                    return (input, CompareResult::Ok(bit));
+                    return (input, CompareResult::Ok(bit))
                 }
             }
         }
@@ -25,10 +25,7 @@ impl<'a> Compare<Bits<&'a [u8]>> for bool {
 impl<'a> Compare<Bits<&'a mut [u8]>> for bool {
     type Output = bool;
 
-    fn compare(
-        &self,
-        mut input: Bits<&'a mut [u8]>,
-    ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, mut input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
         match input.bytes.get(0) {
             None => (),
             Some(&byte) => {
@@ -36,7 +33,7 @@ impl<'a> Compare<Bits<&'a mut [u8]>> for bool {
 
                 if bit == *self {
                     input.bit_index += 1;
-                    return (input, CompareResult::Ok(bit));
+                    return (input, CompareResult::Ok(bit))
                 }
             }
         }
@@ -45,10 +42,7 @@ impl<'a> Compare<Bits<&'a mut [u8]>> for bool {
     }
 }
 
-fn cmp_bits_small<'a, 'b>(
-    tag: &'b [bool],
-    mut input: Bits<&'a [u8]>,
-) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
+fn cmp_bits_small<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
     let old_input = input;
     let mut s_bits = tag.iter();
 
@@ -62,7 +56,7 @@ fn cmp_bits_small<'a, 'b>(
         input.bit_index += 1;
 
         if bit != s_bit {
-            return (old_input, CompareResult::Error);
+            return (old_input, CompareResult::Error)
         }
     }
 
@@ -82,7 +76,7 @@ fn cmp_bits_small<'a, 'b>(
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error);
+                return (old_input, CompareResult::Error)
             }
         }
     }
@@ -90,10 +84,7 @@ fn cmp_bits_small<'a, 'b>(
     (input, CompareResult::Ok(tag))
 }
 
-fn cmp_bits_large<'a, 'b>(
-    tag: &'b [bool],
-    mut input: Bits<&'a [u8]>,
-) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
+fn cmp_bits_large<'a, 'b>(tag: &'b [bool], mut input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<&'b [bool]>) {
     let old_input = input.clone();
     let mut s_bits = tag.iter();
 
@@ -108,7 +99,7 @@ fn cmp_bits_large<'a, 'b>(
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error);
+                return (old_input, CompareResult::Error)
             }
         }
 
@@ -129,14 +120,14 @@ fn cmp_bits_large<'a, 'b>(
         }
 
         if val != byte {
-            return (old_input, CompareResult::Error);
+            return (old_input, CompareResult::Error)
         }
     }
 
     input.bytes = bytes.as_slice();
 
     for _ in s_bits {
-        return (old_input, CompareResult::Incomplete);
+        return (old_input, CompareResult::Incomplete)
     }
 
     if !last_chunk.is_empty() {
@@ -150,7 +141,7 @@ fn cmp_bits_large<'a, 'b>(
             input.bit_index += 1;
 
             if bit != s_bit {
-                return (old_input, CompareResult::Error);
+                return (old_input, CompareResult::Error)
             }
         }
     }
@@ -164,7 +155,7 @@ impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [bool] {
     #[inline]
     fn compare(&self, input: Bits<&'a [u8]>) -> (Bits<&'a [u8]>, CompareResult<Self::Output>) {
         if self.len() == 0 {
-            return (input, CompareResult::Ok(*self));
+            return (input, CompareResult::Ok(*self))
         } else if self.len() < 8 {
             cmp_bits_small(*self, input)
         } else {
@@ -177,10 +168,7 @@ impl<'a, 'i> Compare<Bits<&'a mut [u8]>> for &'i [bool] {
     type Output = &'i [bool];
 
     #[inline]
-    fn compare(
-        &self,
-        input: Bits<&'a mut [u8]>,
-    ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
         let (input, output) = fix(input, *self, |s, i| (&s).compare(i));
         (input, output)
     }
@@ -198,10 +186,7 @@ impl<'a> Compare<Bits<&'a [u8]>> for [bool; 1] {
 impl<'a> Compare<Bits<&'a mut [u8]>> for [bool; 1] {
     type Output = [bool; 1];
 
-    fn compare(
-        &self,
-        input: Bits<&'a mut [u8]>,
-    ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
         let (input, output) = self[0].compare(input);
         (input, output.map(|x| [x]))
     }
@@ -277,13 +262,10 @@ mod test {
         let input_array = &[0b01011010][..];
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([false, true]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 0
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([false, true]), Bits {
+                bytes: input_array,
+                bit_index: 0
+            }),
             Ok((
                 Bits {
                     bytes: input_array,
@@ -294,46 +276,34 @@ mod test {
         );
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([true, false]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 2
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([true, false]), Bits {
+                bytes: input_array,
+                bit_index: 2
+            }),
             Err(Error::Error(()))
         );
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([false, true]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 7
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([false, true]), Bits {
+                bytes: input_array,
+                bit_index: 7
+            }),
             Err(Error::Error(()))
         );
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([false, true, true]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 6
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([false, true, true]), Bits {
+                bytes: input_array,
+                bit_index: 6
+            }),
             Err(Error::Error(()))
         );
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([true, false]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 4
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([true, false]), Bits {
+                bytes: input_array,
+                bit_index: 4
+            }),
             Ok((
                 Bits {
                     bytes: input_array,
@@ -344,13 +314,10 @@ mod test {
         );
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag([true, false]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 6
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag([true, false]), Bits {
+                bytes: input_array,
+                bit_index: 6
+            }),
             Ok((
                 Bits {
                     bytes: &[][..],
@@ -367,18 +334,14 @@ mod test {
 
         // parse 2 bytes of data
         let tag = [
-            true, false, true, false, false, false, false, false, true, true, true, true, false,
-            true, false, true,
+            true, false, true, false, false, false, false, false, true, true, true, true, false, true, false, true,
         ];
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag(tag),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 4
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag(tag), Bits {
+                bytes: input_array,
+                bit_index: 4
+            }),
             Ok((
                 Bits {
                     bytes: &[0b01011010][..],
@@ -396,18 +359,14 @@ mod test {
         // parse 2 bytes of data
 
         let tag = [
-            true, false, true, false, false, false, false, false, true, true, true, true, false,
-            true, false, true,
+            true, false, true, false, false, false, false, false, true, true, true, true, false, true, false, true,
         ];
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag(tag),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 4
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag(tag), Bits {
+                bytes: input_array,
+                bit_index: 4
+            }),
             Ok((
                 Bits {
                     bytes: &mut [0b01011010][..],

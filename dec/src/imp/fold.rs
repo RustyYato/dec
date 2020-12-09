@@ -1,7 +1,4 @@
-use crate::error::*;
-use crate::map::Map;
-use crate::traits::*;
-use crate::try_fold::TryFold;
+use crate::{error::*, map::Map, traits::*, try_fold::TryFold};
 
 use std::ops::{Bound, RangeBounds};
 
@@ -58,9 +55,7 @@ pub struct FoldRange<P, A, F, R> {
     pub range: R,
 }
 
-fn absurd<T>(x: std::convert::Infallible) -> T {
-    match x {}
-}
+fn absurd<T>(x: std::convert::Infallible) -> T { match x {} }
 
 impl<P, MkA, A, F, I, E> ParseOnce<I, E> for Fold<P, MkA, F>
 where
@@ -98,11 +93,7 @@ where
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
         Fold {
             parser: parser.by_mut(),
@@ -122,11 +113,7 @@ where
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
         Fold {
             parser: parser.by_ref(),
@@ -189,9 +176,7 @@ where
 
         // fast track no-ops
         match end {
-            Bound::Excluded(1) | Bound::Excluded(0) | Bound::Included(0) => {
-                return Ok((input, mk_acc()))
-            }
+            Bound::Excluded(1) | Bound::Excluded(0) | Bound::Included(0) => return Ok((input, mk_acc())),
             _ => (),
         }
 
@@ -223,12 +208,7 @@ where
                 // ended because index reached range start
                 Err(value) => (input, value),
                 // ended because parser failed
-                Ok(_) => {
-                    return Err(Error::Error(ParseError::from_input_kind(
-                        input,
-                        ErrorKind::RangeStart,
-                    )))
-                }
+                Ok(_) => return Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::RangeStart))),
             }
         } else {
             (input, mk_acc())
@@ -250,7 +230,7 @@ where
         };
 
         if is_done {
-            return Ok((input, value));
+            return Ok((input, value))
         }
 
         Map(
@@ -343,8 +323,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::error::Error;
-    use crate::tag::Tag;
+    use crate::{error::Error, tag::Tag};
 
     #[test]
     fn foo() -> Result<(), Error<()>> {

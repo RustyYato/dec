@@ -14,15 +14,11 @@ pub struct Indexed<I, P = DefaultPos> {
 }
 
 impl<I: InputEq, P: PartialEq> InputEq for Indexed<I, P> {
-    fn eq(&self, other: &Self) -> bool {
-        self.pos == other.pos && self.inner.eq(&other.inner)
-    }
+    fn eq(&self, other: &Self) -> bool { self.pos == other.pos && self.inner.eq(&other.inner) }
 }
 
 impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
-    fn len(&self) -> usize {
-        self.inner.len()
-    }
+    fn len(&self) -> usize { self.inner.len() }
 
     fn cut(mut self, at: usize) -> Self {
         self.inner = self.inner.cut(at);
@@ -49,23 +45,15 @@ pub trait Pos: Copy {
 }
 
 impl<I, P: Pos + Default> Indexed<I, P> {
-    pub fn new(inner: I) -> Self {
-        Self::with_pos(inner, P::default())
-    }
+    pub fn new(inner: I) -> Self { Self::with_pos(inner, P::default()) }
 }
 
 impl<I, P: Pos> Indexed<I, P> {
-    pub fn with_pos(inner: I, pos: P) -> Self {
-        Self { inner, pos }
-    }
+    pub fn with_pos(inner: I, pos: P) -> Self { Self { inner, pos } }
 
-    pub fn pos(&self) -> P {
-        self.pos.clone()
-    }
+    pub fn pos(&self) -> P { self.pos.clone() }
 
-    pub fn inner(&self) -> &I {
-        &self.inner
-    }
+    pub fn inner(&self) -> &I { &self.inner }
 }
 
 impl<I: InputSplit, P: Pos> Spanned<P> for Indexed<I, P> {
@@ -78,18 +66,13 @@ impl<I: InputSplit, P: Pos> Spanned<P> for Indexed<I, P> {
 }
 
 impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
-    fn span(&self) -> Span<P> {
-        self.0.span()
-    }
+    fn span(&self) -> Span<P> { self.0.span() }
 }
 
 impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
     type Output = T::Output;
 
-    fn compare(
-        &self,
-        mut indexed_input: Indexed<I, P>,
-    ) -> (Indexed<I, P>, CompareResult<Self::Output>) {
+    fn compare(&self, mut indexed_input: Indexed<I, P>) -> (Indexed<I, P>, CompareResult<Self::Output>) {
         let len = indexed_input.inner.len();
         let (input, result) = self.compare(indexed_input.inner);
         indexed_input.inner = input;

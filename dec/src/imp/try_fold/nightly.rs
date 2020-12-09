@@ -43,11 +43,7 @@ where
     R: Try<Ok = A>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
         TryFold {
             parser: parser.by_mut(),
@@ -68,11 +64,7 @@ where
     R: Try<Ok = A>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
         TryFold {
             parser: parser.by_ref(),

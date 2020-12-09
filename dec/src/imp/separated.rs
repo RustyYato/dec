@@ -1,7 +1,6 @@
 use std::ops::RangeBounds;
 
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 use crate::seq::FoldRange;
 

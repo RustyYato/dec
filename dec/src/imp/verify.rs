@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -21,10 +20,7 @@ where
         if (self.1)(&output) {
             Ok((input, output))
         } else {
-            Err(Error::Error(ParseError::from_input_kind(
-                old_input,
-                ErrorKind::Verify,
-            )))
+            Err(Error::Error(ParseError::from_input_kind(old_input, ErrorKind::Verify)))
         }
     }
 }
@@ -48,7 +44,5 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Verify(self.0.by_ref(), &self.1).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Verify(self.0.by_ref(), &self.1).parse_once(input) }
 }

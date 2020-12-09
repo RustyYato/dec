@@ -11,11 +11,7 @@ where
     type Output = Result<A, E2>;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
         try_fold_parse_once(parser, mk_acc(), func, input)
     }
 }
@@ -29,11 +25,7 @@ where
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
         try_fold_parse_once(parser.by_mut(), mk_acc(), func, input)
     }
 }
@@ -47,11 +39,7 @@ where
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
         try_fold_parse_once(parser.by_ref(), mk_acc(), func, input)
     }
 }

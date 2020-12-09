@@ -24,12 +24,12 @@ impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [u8] {
                 let ib = (ib0 << bit_index) | (ib1 >> (8 - bit_index));
 
                 if ib != sb {
-                    return (old_input, CompareResult::Error);
+                    return (old_input, CompareResult::Error)
                 }
             }
 
             for _ in s_bytes {
-                return (old_input, CompareResult::Incomplete);
+                return (old_input, CompareResult::Incomplete)
             }
 
             input.bytes = &input.bytes[self.len()..];
@@ -42,10 +42,7 @@ impl<'a, 'i> Compare<Bits<&'a [u8]>> for &'i [u8] {
 impl<'a, 'i> Compare<Bits<&'a mut [u8]>> for &'i [u8] {
     type Output = &'i [u8];
 
-    fn compare(
-        &self,
-        input: Bits<&'a mut [u8]>,
-    ) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
+    fn compare(&self, input: Bits<&'a mut [u8]>) -> (Bits<&'a mut [u8]>, CompareResult<Self::Output>) {
         fix(input, *self, |s, i| (&s).compare(i))
     }
 }
@@ -61,13 +58,10 @@ mod test {
         let input_array = &[0b01011010, 0b00001111, 0b01011010][..];
 
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(
-                Tag(&[0b1010_0000, 0b1111_0101][..]),
-                Bits {
-                    bytes: input_array,
-                    bit_index: 4
-                }
-            ),
+            ParseOnce::<_, ()>::parse_once(Tag(&[0b1010_0000, 0b1111_0101][..]), Bits {
+                bytes: input_array,
+                bit_index: 4
+            }),
             Ok((
                 Bits {
                     bytes: &[0b01011010][..],

@@ -40,9 +40,7 @@ impl<P, I, E> Iter<P, I, E> {
         }
     }
 
-    pub fn finish(self) -> PResult<I, (), E> {
-        self.state.into()
-    }
+    pub fn finish(self) -> PResult<I, (), E> { self.state.into() }
 }
 
 impl<P: ParseMut<I, E>, I, E: ParseError<I>> std::iter::FusedIterator for &mut Iter<P, I, E> {}

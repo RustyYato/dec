@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::traits::*;
+use crate::{error::*, traits::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -22,21 +21,15 @@ pub trait TupleAll<I, E>: TupleAllMut<I, E> {
 impl<T: TupleAllOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for All<T> {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse_once(input)
-    }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { self.0.parse_once(input) }
 }
 
 impl<T: TupleAllMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for All<T> {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse_mut(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { self.0.parse_mut(input) }
 }
 
 impl<T: TupleAll<I, E>, I, E: ParseError<I>> Parse<I, E> for All<T> {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        self.0.parse(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }
 
 macro_rules! impl_tuple_fold {

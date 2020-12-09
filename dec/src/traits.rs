@@ -1,5 +1,7 @@
-use crate::error::{DefaultError, PResult, ParseError};
-use crate::iter::Iter;
+use crate::{
+    error::{DefaultError, PResult, ParseError},
+    iter::Iter,
+};
 
 pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {
     type Output;
@@ -23,13 +25,9 @@ pub trait ParserRef {
         crate::combinator::AppendError(kind, self)
     }
 
-    fn by_mut(&mut self) -> crate::ext::Mut<Self> {
-        crate::ext::Mut(self)
-    }
+    fn by_mut(&mut self) -> crate::ext::Mut<Self> { crate::ext::Mut(self) }
 
-    fn by_ref(&self) -> crate::ext::Ref<Self> {
-        crate::ext::Ref(self)
-    }
+    fn by_ref(&self) -> crate::ext::Ref<Self> { crate::ext::Ref(self) }
 
     fn piter<I, E>(self, input: I) -> Iter<Self, I, E>
     where
@@ -39,9 +37,7 @@ pub trait ParserRef {
     }
 
     #[cfg(any(doc, feature = "nightly"))]
-    fn boxed_once<'a, I, E>(
-        self,
-    ) -> crate::ext::Own<dyn 'a + ParseOnce<I, E, Output = Self::Output>>
+    fn boxed_once<'a, I, E>(self) -> crate::ext::Own<dyn 'a + ParseOnce<I, E, Output = Self::Output>>
     where
         Self: 'a + ParseOnce<I, E> + Sized,
         E: ParseError<I>,
@@ -95,13 +91,9 @@ pub trait InputSplit: Sized {
 }
 
 impl<T> InputSplit for &[T] {
-    fn len(&self) -> usize {
-        (**self).len()
-    }
+    fn len(&self) -> usize { (**self).len() }
 
-    fn cut(self, at: usize) -> Self {
-        &self[..at]
-    }
+    fn cut(self, at: usize) -> Self { &self[..at] }
 
     fn advance(self, at: usize) -> std::result::Result<Self, Self> {
         match self.get(at..) {
@@ -112,13 +104,9 @@ impl<T> InputSplit for &[T] {
 }
 
 impl InputSplit for &str {
-    fn len(&self) -> usize {
-        (**self).len()
-    }
+    fn len(&self) -> usize { (**self).len() }
 
-    fn cut(self, at: usize) -> Self {
-        &self[..at]
-    }
+    fn cut(self, at: usize) -> Self { &self[..at] }
 
     fn advance(self, at: usize) -> std::result::Result<Self, Self> {
         match self.get(at..) {
@@ -129,13 +117,9 @@ impl InputSplit for &str {
 }
 
 impl<T> InputSplit for &mut [T] {
-    fn len(&self) -> usize {
-        (**self).len()
-    }
+    fn len(&self) -> usize { (**self).len() }
 
-    fn cut(self, at: usize) -> Self {
-        &mut self[..at]
-    }
+    fn cut(self, at: usize) -> Self { &mut self[..at] }
 
     fn advance(self, at: usize) -> std::result::Result<Self, Self> {
         if self.len() >= at {
@@ -147,13 +131,9 @@ impl<T> InputSplit for &mut [T] {
 }
 
 impl InputSplit for &mut str {
-    fn len(&self) -> usize {
-        (**self).len()
-    }
+    fn len(&self) -> usize { (**self).len() }
 
-    fn cut(self, at: usize) -> Self {
-        &mut self[..at]
-    }
+    fn cut(self, at: usize) -> Self { &mut self[..at] }
 
     fn advance(self, at: usize) -> std::result::Result<Self, Self> {
         if self.len() >= at && self.is_char_boundary(at) {

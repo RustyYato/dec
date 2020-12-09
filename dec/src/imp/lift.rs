@@ -1,5 +1,4 @@
-use crate::error::*;
-use crate::prelude::*;
+use crate::{error::*, prelude::*};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -32,9 +31,7 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Lower(self.0.by_mut()).parse_once(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Lower(self.0.by_mut()).parse_once(input) }
 }
 
 impl<P, I, E> Parse<I, E> for Lower<P>
@@ -43,9 +40,7 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Lower(self.0.by_ref()).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Lower(self.0.by_ref()).parse_once(input) }
 }
 
 impl<P, I, E, O> ParseOnce<I, E> for Lift<P>
@@ -71,9 +66,7 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Lift(self.0.by_mut()).parse_once(input)
-    }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Lift(self.0.by_mut()).parse_once(input) }
 }
 
 impl<P, I, E, O> Parse<I, E> for Lift<P>
@@ -82,7 +75,5 @@ where
     I: Clone,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Lift(self.0.by_ref()).parse_once(input)
-    }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Lift(self.0.by_ref()).parse_once(input) }
 }
