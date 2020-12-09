@@ -115,7 +115,7 @@ impl<P: ParseMut<I, E>, Q: ParseMut<I, E>, F: FnOnce() -> C, C: Extend<P::Output
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         FoldUntil {
             mk_acc: self.collection,
-            func: crate::extend,
+            func: crate::utils::extend,
             parser: self.parser,
             stop: self.stop,
         }

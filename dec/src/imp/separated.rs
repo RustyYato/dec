@@ -2,55 +2,65 @@ use std::ops::RangeBounds;
 
 use crate::{error::*, prelude::*};
 
-use crate::seq::FoldRange;
+use crate::imp::{map::Map, ranged::Ranged, try_separated::TrySeparatedFold};
 
-pub fn separated<R: std::ops::RangeBounds<usize>, S, P, O>(
+pub fn separated<O, P, S, R: std::ops::RangeBounds<usize>>(
     range: R,
     sep: S,
     item: P,
-) -> SeparatedRange<R, S, P, impl Copy + Fn() -> Vec<O>> {
+) -> SeparatedRange<P, S, R, impl Copy + Fn() -> Vec<O>> {
     SeparatedRange {
         range,
         sep,
         item,
-        collection: Vec::new,
+        mk_collection: Vec::new,
     }
 }
 
-pub fn iseparated<R: std::ops::RangeBounds<usize>, S, P, C, O>(
+pub fn iseparated<P, S, R: std::ops::RangeBounds<usize>>(
     range: R,
     sep: S,
     item: P,
-) -> SeparatedRange<R, S, P, impl Copy + Fn() -> crate::Ignore> {
+) -> SeparatedRange<P, S, R, impl Copy + Fn() -> crate::Ignore> {
     SeparatedRange {
         range,
         sep,
         item,
-        collection: crate::Ignore,
+        mk_collection: crate::Ignore,
     }
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SeparatedFoldRange<R, A, S, P, Fs, Fp> {
-    pub sep: S,
+pub struct SeparatedFold<P, S, Fp, Fs, MkA> {
     pub item: P,
-    pub sep_func: Fs,
+    pub sep: S,
     pub item_func: Fp,
-    pub mk_acc: A,
+    pub sep_func: Fs,
+    pub mk_acc: MkA,
+}
+
+#[must_use = "parsers are lazy and do nothing unless consumed"]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SeparatedFoldRange<P, S, Fp, Fs, MkA, R> {
+    pub item: P,
+    pub sep: S,
+    pub item_func: Fp,
+    pub sep_func: Fs,
+    pub mk_acc: MkA,
     pub range: R,
 }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SeparatedRange<R, S, P, C> {
-    pub range: R,
-    pub sep: S,
+pub struct SeparatedRange<P, S, R, MkC> {
     pub item: P,
-    pub collection: C,
+    pub sep: S,
+    pub range: R,
+    pub mk_collection: MkC,
 }
 
-impl<R, MkA, A, Fs, Fp, S, P, I, E> ParseOnce<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
+impl<I, E, P, S, Fp, Fs, MkA, A> ParseOnce<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
     I: Clone,
     E: ParseError<I>,
@@ -59,193 +69,337 @@ where
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
     MkA: FnOnce() -> A,
-    R: RangeBounds<usize>,
 {
     type Output = A;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
         let Self {
-            mut sep,
-            mut item,
-            mut sep_func,
-            mut item_func,
+            item,
+            sep,
+            item_func,
+            sep_func,
             mk_acc,
-            range,
         } = self;
 
-        let mut do_sep = false;
-
-        FoldRange {
-            parser: move |input| {
-                let (input, sep) = if do_sep {
-                    let (input, value) = sep.parse_mut(input)?;
-                    (input, Some(value))
-                } else {
-                    do_sep = true;
-                    (input, None)
-                };
-
-                let (input, item) = item.parse_mut(input)?;
-
-                Ok((input, (sep, item)))
-            },
-            func: move |mut acc, (sep, item)| {
-                if let Some(sep) = sep {
-                    acc = sep_func(acc, sep);
-                }
-                item_func(acc, item)
-            },
+        TrySeparatedFold {
+            item,
+            sep,
+            item_func: crate::utils::ok(item_func),
+            sep_func: crate::utils::ok(sep_func),
             mk_acc,
-            range,
         }
         .parse_once(input)
+        .map(crate::utils::unwrap_absurd)
     }
 }
 
-impl<R, MkA, A, Fs, Fp, S, P, I, E> ParseMut<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
+impl<I, E, P, S, Fp, Fs, MkA, A> ParseMut<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
     I: Clone,
-    MkA: FnMut() -> A,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
-    R: RangeBounds<usize> + Clone,
+    MkA: FnMut() -> A,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        SeparatedFoldRange {
-            sep: self.sep.by_mut(),
-            item: self.item.by_mut(),
-            sep_func: &mut self.sep_func,
-            item_func: &mut self.item_func,
-            mk_acc: &mut self.mk_acc,
-            range: self.range.clone(),
+        let Self {
+            item,
+            sep,
+            item_func,
+            sep_func,
+            mk_acc,
+        } = self;
+
+        SeparatedFold {
+            item: item.by_mut(),
+            sep: sep.by_mut(),
+            item_func,
+            sep_func,
+            mk_acc,
         }
         .parse_once(input)
     }
 }
 
-impl<R, A, MkA, Fs, Fp, S, P, I, E> Parse<I, E> for SeparatedFoldRange<R, MkA, S, P, Fs, Fp>
+impl<I, E, P, S, Fp, Fs, MkA, A> Parse<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
-    MkA: Fn() -> A,
     I: Clone,
     E: ParseError<I>,
     S: Parse<I, E>,
     P: Parse<I, E>,
     Fs: Fn(A, S::Output) -> A,
     Fp: Fn(A, P::Output) -> A,
-    R: RangeBounds<usize> + Clone,
+    MkA: Fn() -> A,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        SeparatedFoldRange {
-            sep: self.sep.by_ref(),
-            item: self.item.by_ref(),
-            sep_func: &self.sep_func,
-            item_func: &self.item_func,
-            mk_acc: &self.mk_acc,
-            range: self.range.clone(),
+        let Self {
+            item,
+            sep,
+            item_func,
+            sep_func,
+            mk_acc,
+        } = self;
+
+        SeparatedFold {
+            item: item.by_ref(),
+            sep: sep.by_ref(),
+            item_func,
+            sep_func,
+            mk_acc,
         }
         .parse_once(input)
     }
 }
 
-impl<R, S, P, C, I, E, A> ParseOnce<I, E> for SeparatedRange<R, S, P, C>
+impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseOnce<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     I: Clone,
     E: ParseError<I>,
-    S: ParseMut<I, E>,
     P: ParseMut<I, E>,
-    C: FnOnce() -> A,
-    A: Extend<P::Output>,
+    S: ParseMut<I, E>,
+    Fp: FnMut(A, P::Output) -> A,
+    Fs: FnMut(A, S::Output) -> A,
+    MkA: FnOnce() -> A,
     R: RangeBounds<usize>,
 {
     type Output = A;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        SeparatedFoldRange {
-            sep: self.sep,
-            item: self.item,
-            sep_func: |acc: A, _: S::Output| acc,
-            item_func: |mut collection: A, value: P::Output| {
-                collection.extend(Some(value));
-                collection
-            },
-            mk_acc: self.collection,
-            range: self.range,
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            mut item,
+            mut sep,
+            mut item_func,
+            mut sep_func,
+            mk_acc,
+            range,
+        } = self;
+
+        let mut acc = mk_acc();
+
+        let (mut prefix, mut tail) = match Ranged::new(range) {
+            Some(range) => range.split(),
+            None => return Ok((input, acc)),
+        };
+
+        if let Some(()) = prefix.next() {
+            let (next_input, next_acc) = TrySeparatedFold {
+                item: item.by_mut(),
+                sep: sep.by_mut(),
+                item_func: crate::utils::step(&mut item_func, prefix),
+                sep_func: crate::utils::ok(&mut sep_func),
+                mk_acc: crate::utils::value(acc),
+            }
+            .parse_once(input)?;
+
+            input = next_input;
+            acc = match next_acc {
+                // ended because index reached range start
+                Err(acc) => acc,
+                // ended because parser failed
+                Ok(_) => return Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::RangeStart))),
+            };
         }
-        .parse_once(input)
+
+        if tail.next().is_some() {
+            Map(
+                TrySeparatedFold {
+                    item,
+                    sep,
+                    item_func: crate::utils::step(item_func, tail),
+                    sep_func: crate::utils::ok(sep_func),
+                    mk_acc: crate::utils::value(acc),
+                },
+                crate::utils::into_inner,
+            )
+            .parse_once(input)
+        } else {
+            Ok((input, acc))
+        }
     }
 }
 
-impl<R, S, P, C, I, E, A> ParseMut<I, E> for SeparatedRange<R, S, P, C>
+impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseMut<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     I: Clone,
     E: ParseError<I>,
-    S: ParseMut<I, E>,
     P: ParseMut<I, E>,
-    C: FnMut() -> A,
-    A: Extend<P::Output>,
+    S: ParseMut<I, E>,
+    Fp: FnMut(A, P::Output) -> A,
+    Fs: FnMut(A, S::Output) -> A,
+    MkA: FnMut() -> A,
     R: RangeBounds<usize> + Clone,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        SeparatedRange {
-            collection: &mut self.collection,
-            item: self.item.by_mut(),
-            sep: self.sep.by_mut(),
-            range: self.range.clone(),
+        let Self {
+            item,
+            sep,
+            item_func,
+            sep_func,
+            mk_acc,
+            range,
+        } = self;
+
+        SeparatedFoldRange {
+            item: item.by_mut(),
+            sep: sep.by_mut(),
+            item_func,
+            sep_func,
+            mk_acc,
+            range: range.clone(),
         }
         .parse_once(input)
     }
 }
 
-impl<R, S, P, C, I, E, A> Parse<I, E> for SeparatedRange<R, S, P, C>
+impl<I, E, P, S, Fp, Fs, MkA, A, R> Parse<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     I: Clone,
     E: ParseError<I>,
-    S: Parse<I, E>,
     P: Parse<I, E>,
-    C: Fn() -> A,
-    A: Extend<P::Output>,
+    S: Parse<I, E>,
+    Fp: Fn(A, P::Output) -> A,
+    Fs: Fn(A, S::Output) -> A,
+    MkA: Fn() -> A,
     R: RangeBounds<usize> + Clone,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        SeparatedRange {
-            collection: &self.collection,
-            item: self.item.by_ref(),
-            sep: self.sep.by_ref(),
-            range: self.range.clone(),
+        let Self {
+            item,
+            sep,
+            item_func,
+            sep_func,
+            mk_acc,
+            range,
+        } = self;
+
+        SeparatedFoldRange {
+            item: item.by_ref(),
+            sep: sep.by_ref(),
+            item_func,
+            sep_func,
+            mk_acc,
+            range: range.clone(),
         }
         .parse_once(input)
     }
 }
 
-#[test]
-fn test() {
-    use crate::tag::Tag;
+impl<I, E, P, S, R, MkC, C> ParseOnce<I, E> for SeparatedRange<P, S, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: ParseMut<I, E>,
+    S: ParseMut<I, E>,
+    R: RangeBounds<usize>,
+    MkC: FnOnce() -> C,
+    C: Extend<P::Output>,
+{
+    type Output = C;
 
-    let _: crate::prelude::PResult<_, _, ()> = separated(.., Tag(','), Tag('a')).parse_once("");
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            item,
+            sep,
+            range,
+            mk_collection,
+        } = self;
 
-    let mut parser = SeparatedFoldRange {
-        item: Tag('a'),
-        sep: Tag(','),
-        range: 2..=3,
-        item_func: |(i, s), _| (i + 1, s),
-        sep_func: |(i, s), _| (i, s + 1),
-        mk_acc: || (0, 0),
-    };
-
-    ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,").unwrap_err();
-
-    let (input, (i, s)) = ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,a,").unwrap();
-
-    assert_eq!(input, ",");
-    assert_eq!(i, 2);
-    assert_eq!(s, 1);
-
-    let (input, (i, s)) = ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,a,a,a,a").unwrap();
-
-    assert_eq!(input, ",a,a");
-    assert_eq!(i, 3);
-    assert_eq!(s, 2);
+        SeparatedFoldRange {
+            item,
+            sep,
+            item_func: crate::utils::extend,
+            sep_func: crate::utils::fst,
+            mk_acc: mk_collection,
+            range,
+        }
+        .parse_once(input)
+    }
 }
+
+impl<I, E, P, S, R, MkC, C> ParseMut<I, E> for SeparatedRange<P, S, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: ParseMut<I, E>,
+    S: ParseMut<I, E>,
+    R: RangeBounds<usize> + Clone,
+    MkC: FnMut() -> C,
+    C: Extend<P::Output>,
+{
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            item,
+            sep,
+            range,
+            mk_collection,
+        } = self;
+
+        SeparatedRange {
+            item: item.by_mut(),
+            sep: sep.by_mut(),
+            mk_collection,
+            range: range.clone(),
+        }
+        .parse_once(input)
+    }
+}
+
+impl<I, E, P, S, R, MkC, C> Parse<I, E> for SeparatedRange<P, S, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: Parse<I, E>,
+    S: Parse<I, E>,
+    R: RangeBounds<usize> + Clone,
+    MkC: Fn() -> C,
+    C: Extend<P::Output>,
+{
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            item,
+            sep,
+            range,
+            mk_collection,
+        } = self;
+
+        SeparatedRange {
+            item: item.by_ref(),
+            sep: sep.by_ref(),
+            mk_collection,
+            range: range.clone(),
+        }
+        .parse_once(input)
+    }
+}
+
+// #[test]
+// fn test() {
+//     use crate::tag::Tag;
+
+//     let _: crate::prelude::PResult<_, _, ()> = separated(.., Tag(','), Tag('a')).parse_once("");
+
+//     let mut parser = SeparatedFoldRange {
+//         item: Tag('a'),
+//         sep: Tag(','),
+//         range: 2..=3,
+//         item_func: |(i, s), _| (i + 1, s),
+//         sep_func: |(i, s), _| (i, s + 1),
+//         mk_acc: || (0, 0),
+//     };
+
+//     ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,").unwrap_err();
+
+//     let (input, (i, s)) = ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,a,").unwrap();
+
+//     assert_eq!(input, ",");
+//     assert_eq!(i, 2);
+//     assert_eq!(s, 1);
+
+//     let (input, (i, s)) = ParseOnce::<_, ()>::parse_once(parser.by_mut(), "a,a,a,a,a").unwrap();
+
+//     assert_eq!(input, ",a,a");
+//     assert_eq!(i, 3);
+//     assert_eq!(s, 2);
+// }

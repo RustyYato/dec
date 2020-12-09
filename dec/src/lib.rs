@@ -7,24 +7,28 @@ mod compare;
 use imp::*;
 #[forbid(unsafe_code)]
 mod imp {
-    pub mod all;
-    pub mod any;
-    pub mod context;
-    pub mod fold;
-    pub mod lift;
-    pub mod map;
-    pub mod multi;
-    pub mod not;
-    pub mod optional;
-    pub mod recognize;
-    pub mod separated;
-    pub mod seq;
-    pub mod skip;
     pub mod tag;
-    pub mod try_fold;
-    pub mod until;
-    pub mod value;
-    pub mod verify;
+
+    pub(crate) mod all;
+    pub(crate) mod any;
+    pub(crate) mod context;
+    pub(crate) mod fold;
+    pub(crate) mod lift;
+    pub(crate) mod map;
+    pub(crate) mod not;
+    pub(crate) mod optional;
+    pub(crate) mod recognize;
+    pub(crate) mod separated;
+    pub(crate) mod seq;
+    pub(crate) mod skip;
+    pub(crate) mod try_fold;
+    pub(crate) mod try_separated;
+    pub(crate) mod until;
+    pub(crate) mod value;
+    pub(crate) mod verify;
+
+    mod ranged;
+    pub(crate) mod utils;
 }
 
 #[forbid(unsafe_code)]
@@ -65,12 +69,14 @@ pub mod branch {
 pub mod seq {
     use crate::*;
 
+    use core::ops::{RangeBounds, RangeFrom, RangeFull};
+
     pub use all::All;
-    pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange};
+    pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange, Range};
     pub use imp::seq::{Fst, Mid, Snd};
-    pub use multi::{imany0, imany1, irange, many0, many1, range, Range};
-    pub use separated::{iseparated, separated, SeparatedFoldRange, SeparatedRange};
+    pub use separated::{iseparated, separated, SeparatedFold, SeparatedFoldRange, SeparatedRange};
     pub use try_fold::{try_fold, TryFold};
+    pub use try_separated::{try_separated_fold, TrySeparatedFold};
     pub use until::{FoldUntil, Until};
 
     pub fn all<P>(tuple: P) -> All<P> { All(tuple) }
@@ -94,6 +100,54 @@ pub mod seq {
             collection: crate::Ignore,
             parser,
             stop,
+        }
+    }
+
+    pub fn many0<P, O>(parser: P) -> Range<P, RangeFull, impl Copy + Fn() -> Vec<O>> {
+        Range {
+            parser,
+            range: ..,
+            collection: Vec::new,
+        }
+    }
+
+    pub fn many1<P, O>(parser: P) -> Range<P, RangeFrom<usize>, impl Copy + Fn() -> Vec<O>> {
+        Range {
+            parser,
+            range: 1..,
+            collection: Vec::new,
+        }
+    }
+
+    pub fn range<P, O, R: RangeBounds<usize>>(range: R, parser: P) -> Range<P, R, impl Copy + Fn() -> Vec<O>> {
+        Range {
+            range,
+            parser,
+            collection: Vec::new,
+        }
+    }
+
+    pub fn imany0<P>(parser: P) -> Range<P, RangeFull, impl Copy + Fn() -> crate::Ignore> {
+        Range {
+            parser,
+            range: ..,
+            collection: crate::Ignore,
+        }
+    }
+
+    pub fn imany1<P>(parser: P) -> Range<P, RangeFrom<usize>, impl Copy + Fn() -> crate::Ignore> {
+        Range {
+            parser,
+            range: 1..,
+            collection: crate::Ignore,
+        }
+    }
+
+    pub fn irange<P, R: RangeBounds<usize>>(range: R, parser: P) -> Range<P, R, impl Copy + Fn() -> crate::Ignore> {
+        Range {
+            range,
+            parser,
+            collection: crate::Ignore,
         }
     }
 }
@@ -166,9 +220,4 @@ impl<A> Extend<A> for Count {
     fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
         self.0 = iter.into_iter().count().saturating_add(self.0);
     }
-}
-
-fn extend<C: Extend<V>, V>(mut collection: C, value: V) -> C {
-    collection.extend(Some(value));
-    collection
 }

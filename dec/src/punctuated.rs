@@ -41,49 +41,54 @@ impl<V, P> From<V> for Pair<V, P> {
 }
 
 impl<V, P> Punctuated<V, P> {
-    pub fn parse<A, B>(
-        punct: A,
-        value: B,
-    ) -> crate::separated::SeparatedFoldRange<
-        std::ops::RangeFull,
-        impl Fn() -> Self + Copy,
-        A,
-        B,
-        impl Fn(Self, P) -> Self + Copy,
-        impl Fn(Self, V) -> Self + Copy,
-    > {
-        Self::parse_range(.., punct, value)
+    fn push_value_(mut self, value: V) -> Self {
+        self.push_value(value);
+        self
     }
 
-    pub fn parse_range<R: RangeBounds<usize>, A, B>(
-        range: R,
-        punct: A,
-        value: B,
-    ) -> crate::separated::SeparatedFoldRange<
-        R,
-        impl Fn() -> Self + Copy,
-        A,
-        B,
-        impl Fn(Self, P) -> Self + Copy,
+    fn push_punct_(mut self, punct: P) -> Self {
+        self.push_punct(punct);
+        self
+    }
+
+    pub fn parse<Pp, Pv>(
+        punct: Pp,
+        value: Pv,
+    ) -> crate::separated::SeparatedFold<
+        Pv,
+        Pp,
         impl Fn(Self, V) -> Self + Copy,
+        impl Fn(Self, P) -> Self + Copy,
+        impl Fn() -> Self + Copy,
     > {
-        fn push_value<V, P>(mut this: Punctuated<V, P>, value: V) -> Punctuated<V, P> {
-            this.push_value(value);
-            this
-        }
-
-        fn push_punct<V, P>(mut this: Punctuated<V, P>, punct: P) -> Punctuated<V, P> {
-            this.push_punct(punct);
-            this
-        }
-
-        crate::separated::SeparatedFoldRange {
-            range,
-            mk_acc: Self::new,
+        crate::separated::SeparatedFold {
             item: value,
             sep: punct,
-            item_func: push_value,
-            sep_func: push_punct,
+            item_func: Self::push_value_,
+            sep_func: Self::push_punct_,
+            mk_acc: Self::new,
+        }
+    }
+
+    pub fn parse_range<R: RangeBounds<usize>, Pv, Pp>(
+        range: R,
+        punct: Pp,
+        value: Pv,
+    ) -> crate::separated::SeparatedFoldRange<
+        Pv,
+        Pp,
+        impl Fn(Self, V) -> Self + Copy,
+        impl Fn(Self, P) -> Self + Copy,
+        impl Fn() -> Self + Copy,
+        R,
+    > {
+        crate::separated::SeparatedFoldRange {
+            item: value,
+            sep: punct,
+            item_func: Self::push_value_,
+            sep_func: Self::push_punct_,
+            mk_acc: Self::new,
+            range,
         }
     }
 

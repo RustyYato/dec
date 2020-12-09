@@ -1,6 +1,6 @@
-use crate::{error::*, map::Map, traits::*, try_fold::TryFold};
+use std::ops::RangeBounds;
 
-use std::ops::{Bound, RangeBounds};
+use crate::{error::*, imp::ranged::Ranged, map::Map, traits::*, try_fold::TryFold};
 
 pub fn fold<P, A: Clone, F>(acc: A, parser: P, func: F) -> Fold<P, impl Fn() -> A + Clone, F> {
     Fold {
@@ -55,8 +55,6 @@ pub struct FoldRange<P, A, F, R> {
     pub range: R,
 }
 
-fn absurd<T>(x: std::convert::Infallible) -> T { match x {} }
-
 impl<P, MkA, A, F, I, E> ParseOnce<I, E> for Fold<P, MkA, F>
 where
     MkA: FnOnce() -> A,
@@ -68,19 +66,15 @@ where
     type Output = A;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            mut func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
         TryFold {
             parser,
             mk_acc,
-            func: move |acc, value| Ok(func(acc, value)),
+            func: crate::utils::ok(func),
         }
         .parse_once(input)
-        .map(|(input, x)| (input, x.unwrap_or_else(absurd)))
+        .map(crate::utils::unwrap_absurd)
     }
 }
 
@@ -124,30 +118,6 @@ where
     }
 }
 
-fn into_inner<T>(r: Result<T, T>) -> T {
-    match r {
-        Ok(x) | Err(x) => x,
-    }
-}
-
-fn validate_range(start: Bound<usize>, end: Bound<usize>) -> bool {
-    match (start, end) {
-        (Bound::Excluded(x), Bound::Excluded(y))
-        | (Bound::Included(x), Bound::Included(y))
-        | (Bound::Included(x), Bound::Excluded(y)) => x <= y,
-        (Bound::Excluded(x), Bound::Included(y)) => x < y,
-        (Bound::Unbounded, _) | (_, Bound::Unbounded) => true,
-    }
-}
-
-fn copied(x: Bound<&usize>) -> Bound<usize> {
-    match x {
-        Bound::Included(&x) => Bound::Included(x),
-        Bound::Excluded(&x) => Bound::Excluded(x),
-        Bound::Unbounded => Bound::Unbounded,
-    }
-}
-
 impl<R, P, A, MkA, F, I, E> ParseOnce<I, E> for FoldRange<P, MkA, F, R>
 where
     R: RangeBounds<usize>,
@@ -159,7 +129,7 @@ where
 {
     type Output = A;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self {
             mut parser,
             mk_acc,
@@ -167,102 +137,43 @@ where
             range,
         } = self;
 
-        let start = copied(range.start_bound());
-        let end = copied(range.end_bound());
+        let mut acc = mk_acc();
 
-        assert!(validate_range(start, end), "malformed range");
-
-        let mut index = 0_usize;
-
-        // fast track no-ops
-        match end {
-            Bound::Excluded(1) | Bound::Excluded(0) | Bound::Included(0) => return Ok((input, mk_acc())),
-            _ => (),
-        }
-
-        let start = match start {
-            Bound::Included(x) => Some(x),
-            Bound::Excluded(x) => x.checked_sub(1),
-            Bound::Unbounded => None,
+        let (mut prefix, mut tail) = match Ranged::new(range) {
+            Some(ranged) => ranged.split(),
+            None => return Ok((input, acc)),
         };
 
-        let (input, value) = if let Some(start) = start {
-            let index = &mut index;
-            let func = &mut func;
-            let (input, value) = TryFold {
+        if prefix.next().is_some() {
+            let (next_input, next_acc) = TryFold {
                 parser: parser.by_mut(),
-                mk_acc: mk_acc,
-                func: move |acc, value| {
-                    let acc = func(acc, value);
-                    *index += 1;
-                    if *index < start {
-                        Ok(acc)
-                    } else {
-                        Err(acc)
-                    }
-                },
+                func: crate::utils::step(&mut func, prefix),
+                mk_acc: crate::utils::value(acc),
             }
             .parse_once(input)?;
 
-            match value {
+            input = next_input;
+            acc = match next_acc {
                 // ended because index reached range start
-                Err(value) => (input, value),
+                Err(acc) => acc,
                 // ended because parser failed
                 Ok(_) => return Err(Error::Error(ParseError::from_input_kind(input, ErrorKind::RangeStart))),
             }
-        } else {
-            (input, mk_acc())
-        };
-
-        let is_done = match end {
-            Bound::Included(end) => match index.checked_add(1) {
-                None => true,
-                Some(x) => {
-                    index = x;
-                    index > end
-                }
-            },
-            Bound::Excluded(end) => {
-                index += 1;
-                index >= end
-            }
-            Bound::Unbounded => false,
-        };
-
-        if is_done {
-            return Ok((input, value))
         }
 
-        Map(
-            TryFold {
-                parser,
-                mk_acc: move || value,
-                func: move |acc, value| {
-                    let acc = func(acc, value);
-                    let is_done = match end {
-                        Bound::Included(end) => match index.checked_add(1) {
-                            None => true,
-                            Some(x) => {
-                                index = x;
-                                index > end
-                            }
-                        },
-                        Bound::Excluded(end) => {
-                            index += 1;
-                            index >= end
-                        }
-                        Bound::Unbounded => false,
-                    };
-                    if is_done {
-                        Err(acc)
-                    } else {
-                        Ok(acc)
-                    }
+        if tail.next().is_some() {
+            Map(
+                TryFold {
+                    parser,
+                    func: crate::utils::step(func, tail),
+                    mk_acc: crate::utils::value(acc),
                 },
-            },
-            into_inner,
-        )
-        .parse_once(input)
+                crate::utils::into_inner,
+            )
+            .parse_once(input)
+        } else {
+            Ok((input, acc))
+        }
     }
 }
 
@@ -320,10 +231,93 @@ where
     }
 }
 
+#[must_use = "parsers are lazy and do nothing unless consumed"]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Range<P, R, MkC> {
+    pub range: R,
+    pub parser: P,
+    pub collection: MkC,
+}
+
+impl<I, E, P, R, MkC, C> ParseOnce<I, E> for Range<P, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: ParseMut<I, E>,
+    R: RangeBounds<usize>,
+    MkC: FnOnce() -> C,
+    C: Extend<P::Output>,
+{
+    type Output = C;
+
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
+        FoldRange {
+            range,
+            parser,
+            func: crate::utils::extend,
+            mk_acc: collection,
+        }
+        .parse_once(input)
+    }
+}
+
+impl<I, E, P, R, MkC, C> ParseMut<I, E> for Range<P, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: ParseMut<I, E>,
+    R: RangeBounds<usize> + Clone,
+    MkC: FnMut() -> C,
+    C: Extend<P::Output>,
+{
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
+        Range {
+            parser: parser.by_mut(),
+            range: range.clone(),
+            collection,
+        }
+        .parse_once(input)
+    }
+}
+
+impl<I, E, P, R, MkC, C> Parse<I, E> for Range<P, R, MkC>
+where
+    I: Clone,
+    E: ParseError<I>,
+    P: Parse<I, E>,
+    R: RangeBounds<usize> + Clone,
+    MkC: Fn() -> C,
+    C: Extend<P::Output>,
+{
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+        let Self {
+            range,
+            parser,
+            collection,
+        } = self;
+        Range {
+            parser: parser.by_ref(),
+            range: range.clone(),
+            collection,
+        }
+        .parse_once(input)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{error::Error, tag::Tag};
+    use crate::{error::Error, seq::*, tag::Tag};
 
     #[test]
     fn foo() -> Result<(), Error<()>> {
@@ -428,5 +422,59 @@ mod test {
             range: 4..=2,
         }
         .parse_once("");
+    }
+
+    #[test]
+    fn test_range() {
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(range(.., Tag('.')), "...input"),
+            Ok(("input", vec!['.'; 3]))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(range(..2, Tag('.')), "...input"),
+            Ok(("..input", vec!['.'; 1]))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(range(..=2, Tag('.')), "...input"),
+            Ok((".input", vec!['.'; 2]))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(range(..2, Tag('.')), ".input"),
+            Ok(("input", vec!['.'; 1]))
+        );
+        assert_eq!(
+            ParseOnce::parse_once(range(2.., Tag('.')), ".input"),
+            Err(Error::Error(("input", ErrorKind::RangeStart)))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(range(2.., Tag('.')), "..input"),
+            Ok(("input", vec!['.'; 2]))
+        );
+
+        let parser = Range {
+            range: 1..=3,
+            parser: Tag('.'),
+            collection: String::new,
+        };
+        assert_eq!(
+            ParseOnce::parse_once(parser.by_ref(), "input"),
+            Err(Error::Error(("input", ErrorKind::RangeStart)))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(parser.by_ref(), ".input"),
+            Ok(("input", ".".to_string()))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "..input"),
+            Ok(("input", "..".to_string()))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "...input"),
+            Ok(("input", "...".to_string()))
+        );
+        assert_eq!(
+            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "....input"),
+            Ok((".input", "...".to_string()))
+        );
     }
 }

@@ -3,12 +3,6 @@ use crate::{
     iter::Iter,
 };
 
-pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {
-    type Output;
-
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E>;
-}
-
 impl<T: ?Sized> ParserRef for T {}
 pub trait ParserRef {
     fn with_context(self, ctx: &'static str) -> crate::combinator::Context<Self>
@@ -62,6 +56,12 @@ pub trait ParserRef {
     {
         crate::ext::Own(Box::new(self) as _)
     }
+}
+
+pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {
+    type Output;
+
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E>;
 }
 
 pub trait ParseMut<I, E: ParseError<I> = DefaultError<I>>: ParseOnce<I, E> {
