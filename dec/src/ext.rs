@@ -1,7 +1,8 @@
 use crate::{error::*, traits::*};
 
 cfg_match::cfg_match! {
-    feature = "nightly" => {
+    // TODO: remove FALSE when unsized_locals works again
+    all(FALSE, feature = "nightly") => {
         impl<F: ?Sized + FnOnce(I) -> PResult<I, O, E>, O, I, E: ParseError<I>> ParseOnce<I, E> for F {
             type Output = O;
 

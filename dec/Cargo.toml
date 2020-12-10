@@ -16,3 +16,10 @@ big-tuples = []
 [dependencies]
 cfg-match = '0.2'
 smallvec = { version = '1', optional = true }
+
+[dev-dependencies]
+criterion = '0.3'
+
+[[bench]]
+name = "separated"
+harness = false

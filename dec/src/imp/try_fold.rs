@@ -34,16 +34,19 @@ where
     E: ParseError<I>,
 {
     loop {
-        match parser.parse_mut(input.clone()) {
+        break match parser.parse_mut(input.clone()) {
             Ok((i, out)) => {
                 input = i;
-                acc = match func(acc, out) {
-                    Ok(val) => val,
-                    Err(err) => return Ok((input, Err(err))),
-                };
+                match func(acc, out) {
+                    Ok(val) => {
+                        acc = val;
+                        continue
+                    }
+                    Err(err) => Ok((input, Err(err))),
+                }
             }
-            Err(Error::Error(_)) => return Ok((input, Ok(acc))),
-            Err(err) => return Err(err),
+            Err(Error::Error(_)) => Ok((input, Ok(acc))),
+            Err(err) => Err(err),
         }
     }
 }

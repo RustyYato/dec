@@ -14,22 +14,14 @@ where
     type Output = R;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
-        let Self {
-            parser,
-            mk_acc,
-            mut func,
-        } = self;
+        let Self { parser, mk_acc, func } = self;
 
-        match try_fold_parse_once(
+        crate::utils::from_result(try_fold_parse_once(
             parser,
             mk_acc(),
-            move |acc, value| R::into_result(func(acc, value)),
+            crate::utils::to_result(func),
             input,
-        ) {
-            Ok((input, Ok(value))) => Ok((input, R::from_ok(value))),
-            Ok((input, Err(value))) => Ok((input, R::from_error(value))),
-            Err(err) => Err(err),
-        }
+        ))
     }
 }
 
