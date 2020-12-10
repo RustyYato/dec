@@ -133,3 +133,27 @@ impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Ref<'_, T>
 impl<T: ?Sized + Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Ref<'_, T> {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> { self.0.parse(input) }
 }
+
+impl<T: ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Option<T> {
+    type Output = Option<T::Output>;
+
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+        match self {
+            None => Ok((input, None)),
+            Some(inner) => match inner.parse_once(input) {
+                Ok((input, value)) => Ok((input, Some(value))),
+                Err(err) => Err(err),
+            },
+        }
+    }
+}
+
+impl<T: ParseMut<I, E>, I, E: ParseError<I>> ParseMut<I, E> for Option<T> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+        self.as_mut().map(ParserRef::by_mut).parse_once(input)
+    }
+}
+
+impl<T: Parse<I, E>, I, E: ParseError<I>> Parse<I, E> for Option<T> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { self.as_ref().map(ParserRef::by_ref).parse_once(input) }
+}
