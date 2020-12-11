@@ -32,11 +32,7 @@ pub enum VerboseErrorKind {
 impl<I> VerboseError<I> {
     pub fn map_input<J, F: FnMut(I) -> J>(self, mut f: F) -> VerboseError<J> {
         VerboseError {
-            errors: self
-                .errors
-                .into_iter()
-                .map(|x| x.map_input(&mut f))
-                .collect(),
+            errors: self.errors.into_iter().map(|x| x.map_input(&mut f)).collect(),
         }
     }
 }
@@ -51,11 +47,7 @@ impl<I> VerboseErrorItem<I> {
     pub fn map_input<J, F: FnOnce(I) -> J>(self, f: F) -> VerboseErrorItem<J> {
         match self {
             Self::Alt { parent } => VerboseErrorItem::Alt { parent },
-            Self::Item {
-                parent,
-                input,
-                kind,
-            } => VerboseErrorItem::Item {
+            Self::Item { parent, input, kind } => VerboseErrorItem::Item {
                 parent,
                 kind,
                 input: f(input),
@@ -97,12 +89,10 @@ impl<I: std::fmt::Debug> ParseError<I> for VerboseError<I> {
 
     fn add_context(mut self: Self, input: I, ctx: &'static str) -> Self {
         self.errors.iter_mut().for_each(|err| match err {
-            VerboseErrorItem::Alt { parent } | VerboseErrorItem::Item { parent, .. } => {
-                match parent {
-                    Some(parent) => *parent += 1,
-                    None => *parent = Some(0),
-                }
-            }
+            VerboseErrorItem::Alt { parent } | VerboseErrorItem::Item { parent, .. } => match parent {
+                Some(parent) => *parent += 1,
+                None => *parent = Some(0),
+            },
         });
 
         self.errors.push_front(VerboseErrorItem::Item {
@@ -131,16 +121,12 @@ impl<I: std::fmt::Debug> ParseError<I> for VerboseError<I> {
         } else {
             self.errors.iter_mut().for_each(update_parent(1));
 
-            self.errors
-                .push_front(VerboseErrorItem::Alt { parent: None });
+            self.errors.push_front(VerboseErrorItem::Alt { parent: None });
         }
 
         let parent_offset = self.errors.len();
 
-        other
-            .errors
-            .iter_mut()
-            .for_each(update_parent(parent_offset));
+        other.errors.iter_mut().for_each(update_parent(parent_offset));
 
         self.errors.extend(other.errors);
 

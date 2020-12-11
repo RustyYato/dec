@@ -8,6 +8,7 @@ use imp::*;
 #[forbid(unsafe_code)]
 mod imp {
     pub mod tag;
+    pub mod pratt;
 
     pub(crate) mod all;
     pub(crate) mod any;
@@ -47,7 +48,7 @@ pub mod iter;
 #[forbid(unsafe_code)]
 pub mod traits;
 
-pub use imp::tag;
+pub use imp::{tag, pratt};
 
 #[forbid(unsafe_code)]
 pub mod prelude {
