@@ -1,4 +1,5 @@
-use crate::traits::{Compare, InputEq, InputSplit};
+use crate::{Compare, InputEq, InputSplit};
+
 use core::ops::Range as Span;
 
 type DefaultPos = u32;
@@ -51,7 +52,7 @@ impl<I, P: Pos + Default> Indexed<I, P> {
 impl<I, P: Pos> Indexed<I, P> {
     pub fn with_pos(inner: I, pos: P) -> Self { Self { inner, pos } }
 
-    pub fn pos(&self) -> P { self.pos.clone() }
+    pub fn pos(&self) -> P { self.pos }
 
     pub fn inner(&self) -> &I { &self.inner }
 }

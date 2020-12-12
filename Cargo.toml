@@ -1,5 +1,7 @@
 [workspace]
 
 members = [
+    'dec-core',
     'dec',
+    'dec-pratt',
 ]

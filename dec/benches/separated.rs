@@ -1,10 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-pub fn separated(input: &[u8]) -> dec::prelude::PResult<&[u8], (u32, u32), ()> {
-    use dec::{prelude::*, tag::Tag};
+use dec::tag::tag;
+use dec_core::{error::PResult, ParseOnce};
+
+pub fn separated(input: &[u8]) -> PResult<&[u8], (u32, u32), ()> {
     dec::seq::SeparatedFold {
-        item: Tag(b'a'),
-        sep: Tag(b'b'),
+        item: tag(b'a'),
+        sep: tag(b'b'),
         item_func: |(i, s), _| (i + 1, s),
         sep_func: |(i, s), _| (i, s + 1),
         mk_acc: || (0, 0),
@@ -12,7 +14,7 @@ pub fn separated(input: &[u8]) -> dec::prelude::PResult<&[u8], (u32, u32), ()> {
     .parse_once(input)
 }
 
-pub fn manual(input: &[u8]) -> dec::prelude::PResult<&[u8], (u32, u32), ()> {
+pub fn manual(input: &[u8]) -> PResult<&[u8], (u32, u32), ()> {
     if input.first() != Some(&b'a') {
         return Ok((input, (0, 0)))
     }

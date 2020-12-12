@@ -1,6 +1,9 @@
 use std::ops::RangeBounds;
 
-use crate::{error::*, prelude::*};
+use dec_core::{
+    error::{Error, ErrorKind, PResult, ParseError},
+    Parse, ParseExt, ParseMut, ParseOnce,
+};
 
 use crate::imp::{map::Map, ranged::Ranged, try_separated::TrySeparatedFold};
 

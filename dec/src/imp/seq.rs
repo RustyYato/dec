@@ -1,6 +1,8 @@
-use crate::{error::*, traits::*};
+use dec_core::{
+    error::{PResult, ParseError},
+    Parse, ParseExt, ParseMut, ParseOnce,
+};
 
-use crate::ext::{Mut, Ref};
 pub use crate::{map::Map, seq::All};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
@@ -37,7 +39,7 @@ where
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((Mut(&mut self.0), Mut(&mut self.1))), _fst).parse_once(input)
+        Map(All((self.0.by_mut(), self.1.by_mut())), _fst).parse_once(input)
     }
 }
 
@@ -48,7 +50,7 @@ where
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((Ref(&self.0), Ref(&self.1))), _fst).parse_once(input)
+        Map(All((self.0.by_ref(), self.1.by_ref())), _fst).parse_once(input)
     }
 }
 
@@ -70,7 +72,7 @@ where
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((Mut(&mut self.0), Mut(&mut self.1))), _snd).parse_once(input)
+        Map(All((self.0.by_mut(), self.1.by_mut())), _snd).parse_once(input)
     }
 }
 
@@ -81,7 +83,7 @@ where
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
-        Map(All((Ref(&self.0), Ref(&self.1))), _snd).parse_once(input)
+        Map(All((self.0.by_ref(), self.1.by_ref())), _snd).parse_once(input)
     }
 }
 

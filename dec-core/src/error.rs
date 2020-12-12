@@ -44,7 +44,7 @@ pub trait ParseError<I>: Sized {
 }
 
 impl<I> ParseError<I> for () {
-    fn from_input_kind(_: I, _: ErrorKind) -> Self { () }
+    fn from_input_kind(_: I, _: ErrorKind) -> Self {}
 
     fn append(self, _: I, _: ErrorKind) -> Self { self }
 

@@ -1,4 +1,12 @@
-use crate::{tag::*, traits::*};
+use crate::Compare;
+
+#[must_use = "AnyOf does nothing on it's own, and must be used with Tag"]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct AnyOf<T>(pub T);
+
+#[must_use = "NoneOf does nothing on it's own, and must be used with Tag"]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct NoneOf<T>(pub T);
 
 impl<'i, T: PartialEq> Compare<&'i [T]> for [T] {
     type Output = &'i [T];

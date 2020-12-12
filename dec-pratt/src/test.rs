@@ -1,5 +1,6 @@
 use super::*;
-use crate::{branch::Any, map::Value, prelude::*, tag::Tag};
+use dec::{branch::Any, map::Value, tag::tag};
+use dec_core::{ParseOnce, ParseExt, error::{verbose::VerboseError, ErrorKind}};
 
 #[derive(Debug, PartialEq, Eq)]
 enum PrefixOp {
@@ -92,7 +93,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
         match args {
             Args::Normal(()) => (),
             Args::Recurse(Grouped, expr) => {
-                let (input, _) = Tag(')').with_context("value (paren group end)").parse_once(input)?;
+                let (input, _) = tag(')').with_context("value (paren group end)").parse_once(input)?;
                 return Ok((input.trim_start(), Hook::Complete(expr)))
             }
         }
@@ -103,6 +104,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
             return Ok((input, Hook::Recurse(0, Grouped)))
         }
 
+        #[allow(clippy::or_fun_call)]
         let pos = input
             .char_indices()
             .find_map(|(pos, c)| if c.is_numeric() { None } else { Some(pos) })
@@ -115,6 +117,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
             }
         }
 
+        #[allow(clippy::or_fun_call)]
         let pos = input
             .char_indices()
             .find_map(|(pos, c)| if c.is_alphanumeric() { None } else { Some(pos) })
@@ -134,9 +137,9 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 
     fn prefix_op(&mut self, input: &'i str) -> PResult<&'i str, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
         let (input, prefix) = Any((
-            Value(Operator::prefix_op(PrefixOp::Pos, 11), Tag('+')),
-            Value(Operator::prefix_op(PrefixOp::Neg, 11), Tag('-')),
-            Value(Operator::prefix_op(PrefixOp::Tilda, 1), Tag('~')),
+            Value(Operator::prefix_op(PrefixOp::Pos, 11), tag('+')),
+            Value(Operator::prefix_op(PrefixOp::Neg, 11), tag('-')),
+            Value(Operator::prefix_op(PrefixOp::Tilda, 1), tag('~')),
             //
         ))
         .with_context("prefix op")
@@ -151,13 +154,13 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
         use self::{InfixOp::Simple, Simple::*};
 
         Any((
-            Value(Operator::infix_op(4, Simple(Equal), 3), Tag('=')),
-            Value(Operator::infix_op(6, InfixOp::Ternary(()), 3), Tag('?')),
-            Value(Operator::infix_op(7, Simple(Add), 7), Tag('+')),
-            Value(Operator::infix_op(7, Simple(Sub), 7), Tag('-')),
-            Value(Operator::infix_op(9, Simple(Mul), 9), Tag('*')),
-            Value(Operator::infix_op(9, Simple(Div), 9), Tag('/')),
-            Value(Operator::infix_op(16, Simple(Dot), 15), Tag('.')),
+            Value(Operator::infix_op(4, Simple(Equal), 3), tag('=')),
+            Value(Operator::infix_op(6, InfixOp::Ternary(()), 3), tag('?')),
+            Value(Operator::infix_op(7, Simple(Add), 7), tag('+')),
+            Value(Operator::infix_op(7, Simple(Sub), 7), tag('-')),
+            Value(Operator::infix_op(9, Simple(Mul), 9), tag('*')),
+            Value(Operator::infix_op(9, Simple(Div), 9), tag('/')),
+            Value(Operator::infix_op(16, Simple(Dot), 15), tag('.')),
             //
         ))
         .with_context("infix op")
@@ -169,8 +172,8 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
         input: &'i str,
     ) -> PResult<&'i str, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
         Any((
-            Value(Operator::postfix_op(13, PostfixOp::Bang), Tag('!')),
-            Value(Operator::postfix_op(13, PostfixOp::Index(())), Tag('[')),
+            Value(Operator::postfix_op(13, PostfixOp::Bang), tag('!')),
+            Value(Operator::postfix_op(13, PostfixOp::Index(())), tag('[')),
             //
         ))
         .with_context("postfix op")
@@ -187,7 +190,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
         let inf_op = match args {
             Args::Normal(inf_op) => inf_op,
             Args::Recurse(Ternary, value) => {
-                let (input, _) = Tag(':').with_context("finish infix op (ternary)").parse_once(input)?;
+                let (input, _) = tag(':').with_context("finish infix op (ternary)").parse_once(input)?;
                 return Ok((input.trim_start(), Hook::Complete(InfixOp::Ternary(value))))
             }
         };
@@ -238,7 +241,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 
         let (input, left, post_op) = match args {
             Args::Recurse(Index(left), index) => {
-                let (input, _) = Tag(']').with_context("merge postfix op (index)").parse_once(input)?;
+                let (input, _) = tag(']').with_context("merge postfix op (index)").parse_once(input)?;
                 (input, left, PostfixOp::Index(index))
             }
             Args::Normal(postfix) => match postfix.op {
@@ -254,7 +257,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
     }
 }
 
-fn expr(input: &str) -> PResult<&str, Expr<'_>, crate::error::verbose::VerboseError<&str>> {
+fn expr(input: &str) -> PResult<&str, Expr<'_>, VerboseError<&str>> {
     StackPratt {
         pratt: ExprParser,
         stack: Vec::new(),

@@ -1,22 +1,41 @@
+#![deny(unsafe_code)]
+
 use crate::{
     error::{DefaultError, PResult, ParseError},
     iter::Iter,
 };
 
-impl<T: ?Sized> ParserRef for T {}
-pub trait ParserRef {
-    fn with_context(self, ctx: &'static str) -> crate::combinator::Context<Self>
+#[allow(unsafe_code)]
+mod compare;
+#[forbid(unsafe_code)]
+mod context;
+#[forbid(unsafe_code)]
+pub mod error;
+#[forbid(unsafe_code)]
+mod ext;
+#[forbid(unsafe_code)]
+pub mod indexed;
+#[forbid(unsafe_code)]
+mod iter;
+
+pub use compare::{AnyOf, NoneOf};
+pub use context::{AppendError, Context};
+pub use ext::{Mut, Ref};
+
+impl<T: ?Sized> ParseExt for T {}
+pub trait ParseExt {
+    fn with_context(self, ctx: &'static str) -> Context<Self>
     where
         Self: Sized,
     {
-        crate::combinator::Context(ctx, self)
+        Context(ctx, self)
     }
 
-    fn append_error(self, kind: crate::error::ErrorKind) -> crate::combinator::AppendError<Self>
+    fn append_error(self, kind: crate::error::ErrorKind) -> AppendError<Self>
     where
         Self: Sized,
     {
-        crate::combinator::AppendError(kind, self)
+        AppendError(kind, self)
     }
 
     fn by_mut(&mut self) -> crate::ext::Mut<Self> { crate::ext::Mut(self) }
@@ -30,7 +49,7 @@ pub trait ParserRef {
         Iter::new(self, input)
     }
 
-    #[cfg(any(doc, feature = "nightly"))]
+    #[cfg(feature = "nightly")]
     fn boxed_once<'a, I, E>(self) -> crate::ext::Own<dyn 'a + ParseOnce<I, E, Output = Self::Output>>
     where
         Self: 'a + ParseOnce<I, E> + Sized,
@@ -39,7 +58,7 @@ pub trait ParserRef {
         crate::ext::Own(Box::new(self) as _)
     }
 
-    #[cfg(any(doc, feature = "nightly"))]
+    #[cfg(feature = "nightly")]
     fn boxed_mut<'a, I, E>(self) -> crate::ext::Own<dyn 'a + ParseMut<I, E, Output = Self::Output>>
     where
         Self: 'a + ParseMut<I, E> + Sized,
@@ -48,7 +67,7 @@ pub trait ParserRef {
         crate::ext::Own(Box::new(self) as _)
     }
 
-    #[cfg(any(doc, feature = "nightly"))]
+    #[cfg(feature = "nightly")]
     fn boxed<'a, I, E>(self) -> crate::ext::Own<dyn 'a + Parse<I, E, Output = Self::Output>>
     where
         Self: 'a + Parse<I, E> + Sized,
@@ -84,6 +103,10 @@ pub trait InputEq {
 
 pub trait InputSplit: Sized {
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 
     fn cut(self, at: usize) -> Self;
 

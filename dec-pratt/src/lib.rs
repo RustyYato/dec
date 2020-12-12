@@ -1,4 +1,9 @@
-use crate::{error::{ParseError, PrattErrorKind}, prelude::{Error::Error, ErrorKind, PResult}, traits::{ParseMut, ParseOnce}};
+#![allow(clippy::type_complexity)]
+
+use dec_core::{
+    error::{Error::Error, ErrorKind, PResult, ParseError, PrattErrorKind},
+    ParseMut, ParseOnce,
+};
 
 use core::convert::Infallible;
 
@@ -8,7 +13,7 @@ mod test;
 pub trait Stack {
     type Item;
 
-    fn clear(&mut self) { while let Some(_) = self.pop() {} }
+    fn clear(&mut self) { while self.pop().is_some() {} }
     fn push(&mut self, value: Self::Item);
     fn pop(&mut self) -> Option<Self::Item>;
 }
@@ -144,7 +149,10 @@ pub trait Pratt<I, E: ParseError<I>> {
         args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E> {
-        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::FinishInfixOp))))
+        Err(Error(E::from_input_kind(
+            input,
+            ErrorKind::Pratt(PrattErrorKind::FinishInfixOp),
+        )))
     }
 
     fn merge_prefix_op(
@@ -152,7 +160,10 @@ pub trait Pratt<I, E: ParseError<I>> {
         args: Args<PrefixOp<I, E, Self>, Self::HookMergePrefix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
-        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergePrefixOp))))
+        Err(Error(E::from_input_kind(
+            input,
+            ErrorKind::Pratt(PrattErrorKind::MergePrefixOp),
+        )))
     }
 
     fn merge_infix_op(
@@ -160,7 +171,10 @@ pub trait Pratt<I, E: ParseError<I>> {
         args: Args<InfixOp<I, E, Self>, Self::HookMergeInfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
-        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergeInfixOp))))
+        Err(Error(E::from_input_kind(
+            input,
+            ErrorKind::Pratt(PrattErrorKind::MergeInfixOp),
+        )))
     }
 
     fn merge_postfix_op(
@@ -168,7 +182,10 @@ pub trait Pratt<I, E: ParseError<I>> {
         args: Args<PostfixOp<I, E, Self>, Self::HookMergePostfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
-        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergePostfixOp))))
+        Err(Error(E::from_input_kind(
+            input,
+            ErrorKind::Pratt(PrattErrorKind::MergePostfixOp),
+        )))
     }
 }
 
@@ -522,18 +539,21 @@ where
                             Ok((next_input, infix)) if infix.left >= min_bp => {
                                 let (next_input, inf_op) = pratt.finish_infix_op(Args::Normal(infix.op), next_input)?;
 
+                                let old_min_bp = min_bp;
+                                let recurse = match inf_op {
+                                    Hook::Complete(inf_op) => {
+                                        min_bp = infix.right;
+                                        Recurse::InfixOp(inf_op, lhs)
+                                    }
+                                    Hook::Recurse(bp, hook) => {
+                                        min_bp = bp;
+                                        Recurse::HookFinishInfix(hook, lhs)
+                                    }
+                                };
+
                                 stack.push(StackItem {
-                                    min_bp,
-                                    recurse: match inf_op {
-                                        Hook::Complete(inf_op) => {
-                                            min_bp = infix.right;
-                                            Recurse::InfixOp(inf_op, lhs)
-                                        }
-                                        Hook::Recurse(bp, hook) => {
-                                            min_bp = bp;
-                                            Recurse::HookFinishInfix(hook, lhs)
-                                        }
-                                    },
+                                    min_bp: old_min_bp,
+                                    recurse,
                                 });
 
                                 input = next_input;
@@ -602,16 +622,21 @@ where
                     Recurse::HookFinishInfix(hook, lhs) => {
                         let (next_input, inf_op) = pratt.finish_infix_op(Args::Recurse(hook, value), input)?;
                         input = next_input;
+
+                        let old_min_bp = min_bp;
+                        let recurse = match inf_op {
+                            Hook::Complete(inf_op) => Recurse::InfixOp(inf_op, lhs),
+                            Hook::Recurse(bp, hook) => {
+                                min_bp = bp;
+                                Recurse::HookFinishInfix(hook, lhs)
+                            }
+                        };
+
                         stack.push(StackItem {
-                            min_bp,
-                            recurse: match inf_op {
-                                Hook::Complete(inf_op) => Recurse::InfixOp(inf_op, lhs),
-                                Hook::Recurse(bp, hook) => {
-                                    min_bp = bp;
-                                    Recurse::HookFinishInfix(hook, lhs)
-                                }
-                            },
+                            min_bp: old_min_bp,
+                            recurse,
                         });
+
                         continue 'recurse
                     }
                 }

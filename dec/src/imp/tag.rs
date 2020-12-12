@@ -1,16 +1,13 @@
-use crate::{error::*, traits::*};
+use dec_core::{
+    error::{Error, ErrorKind, PResult, ParseError},
+    Compare, Parse, ParseMut, ParseOnce,
+};
+
+pub fn tag<T>(tag: T) -> Tag<T> { Tag(tag) }
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Tag<T>(pub T);
-
-#[must_use = "AnyOf does nothing on it's own, and must be used with Tag"]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct AnyOf<T>(pub T);
-
-#[must_use = "NoneOf does nothing on it's own, and must be used with Tag"]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct NoneOf<T>(pub T);
 
 impl<T, I, E> ParseOnce<I, E> for Tag<T>
 where

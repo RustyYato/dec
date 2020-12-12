@@ -1,6 +1,11 @@
-use std::ops::RangeBounds;
+use dec_core::{
+    error::{Error, ErrorKind, PResult, ParseError},
+    Parse, ParseExt, ParseMut, ParseOnce,
+};
 
-use crate::{error::*, imp::ranged::Ranged, map::Map, traits::*, try_fold::TryFold};
+use crate::{imp::ranged::Ranged, map::Map, try_fold::TryFold};
+
+use std::ops::RangeBounds;
 
 pub fn fold<P, A: Clone, F>(acc: A, parser: P, func: F) -> Fold<P, impl Fn() -> A + Clone, F> {
     Fold {
@@ -317,12 +322,13 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{error::Error, seq::*, tag::Tag};
+
+    use crate::{seq::range, tag::tag};
 
     #[test]
     fn foo() -> Result<(), Error<()>> {
         let parser = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: ..3,
@@ -333,7 +339,7 @@ mod test {
         assert_eq!(value, 2);
 
         let parser = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: ..=2,
@@ -352,7 +358,7 @@ mod test {
         assert_eq!(value, 2);
 
         let parser = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 2..,
@@ -369,7 +375,7 @@ mod test {
         assert_eq!(value, 4);
 
         let parser = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 2..=4,
@@ -390,7 +396,7 @@ mod test {
         assert_eq!(value, 4);
 
         let parser = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 4..=4,
@@ -415,8 +421,9 @@ mod test {
     #[test]
     #[should_panic(expected = "malformed range")]
     fn invalid_range() {
+        #[allow(clippy::reversed_empty_ranges)]
         let _: PResult<_, _, ()> = FoldRange {
-            parser: Tag("."),
+            parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
             range: 4..=2,
@@ -427,33 +434,33 @@ mod test {
     #[test]
     fn test_range() {
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(.., Tag('.')), "...input"),
+            ParseOnce::<_, ()>::parse_once(range(.., tag('.')), "...input"),
             Ok(("input", vec!['.'; 3]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..2, Tag('.')), "...input"),
+            ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), "...input"),
             Ok(("..input", vec!['.'; 1]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..=2, Tag('.')), "...input"),
+            ParseOnce::<_, ()>::parse_once(range(..=2, tag('.')), "...input"),
             Ok((".input", vec!['.'; 2]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..2, Tag('.')), ".input"),
+            ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), ".input"),
             Ok(("input", vec!['.'; 1]))
         );
         assert_eq!(
-            ParseOnce::parse_once(range(2.., Tag('.')), ".input"),
+            ParseOnce::parse_once(range(2.., tag('.')), ".input"),
             Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(2.., Tag('.')), "..input"),
+            ParseOnce::<_, ()>::parse_once(range(2.., tag('.')), "..input"),
             Ok(("input", vec!['.'; 2]))
         );
 
         let parser = Range {
             range: 1..=3,
-            parser: Tag('.'),
+            parser: tag('.'),
             collection: String::new,
         };
         assert_eq!(

@@ -67,16 +67,6 @@ impl<I: std::fmt::Debug> ParseError<I> for VerboseError<I> {
         VerboseError { errors }
     }
 
-    // fn from_char(input: I, c: char) -> Self {
-    //     let mut errors = VecDeque::with_capacity(1);
-    //     errors.push_back(VerboseErrorItem::Item {
-    //         parent: None,
-    //         input,
-    //         kind: VerboseErrorKind::Char(c),
-    //     });
-    //     VerboseError { errors }
-    // }
-
     fn append(mut self, input: I, kind: ErrorKind) -> Self {
         let len = self.errors.len() - 1;
         self.errors.push_back(VerboseErrorItem::Item {
@@ -87,7 +77,7 @@ impl<I: std::fmt::Debug> ParseError<I> for VerboseError<I> {
         self
     }
 
-    fn add_context(mut self: Self, input: I, ctx: &'static str) -> Self {
+    fn add_context(mut self, input: I, ctx: &'static str) -> Self {
         self.errors.iter_mut().for_each(|err| match err {
             VerboseErrorItem::Alt { parent } | VerboseErrorItem::Item { parent, .. } => match parent {
                 Some(parent) => *parent += 1,

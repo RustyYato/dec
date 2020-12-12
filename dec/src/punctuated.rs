@@ -1,8 +1,5 @@
 use std::{ops::RangeBounds, option, slice, vec};
 
-#[cfg(feature = "smallvec")]
-pub mod small;
-
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Punctuated<V, P> {
     inner: Vec<(V, P)>,
@@ -164,13 +161,33 @@ impl<V, P> Punctuated<V, P> {
 
     pub fn len(&self) -> usize { self.inner.len() + usize::from(self.last.is_some()) }
 
-    pub fn first(&self) -> Option<&V> { self.inner.first().map(|(x, _)| x).or(self.last.as_ref()) }
+    pub fn first(&self) -> Option<&V> {
+        match self.inner.first() {
+            Some((x, _)) => Some(x),
+            None => self.last.as_ref(),
+        }
+    }
 
-    pub fn first_mut(&mut self) -> Option<&mut V> { self.inner.first_mut().map(|(x, _)| x).or(self.last.as_mut()) }
+    pub fn first_mut(&mut self) -> Option<&mut V> {
+        match self.inner.first_mut() {
+            Some((x, _)) => Some(x),
+            None => self.last.as_mut(),
+        }
+    }
 
-    pub fn last(&self) -> Option<&V> { self.last.as_ref().or(self.inner.last().map(|(x, _)| x)) }
+    pub fn last(&self) -> Option<&V> {
+        match self.last.as_ref() {
+            Some(last) => Some(last),
+            None => self.inner.last().map(|(last, _)| last),
+        }
+    }
 
-    pub fn last_mut(&mut self) -> Option<&mut V> { self.last.as_mut().or(self.inner.last_mut().map(|(x, _)| x)) }
+    pub fn last_mut(&mut self) -> Option<&mut V> {
+        match self.last.as_mut() {
+            Some(last) => Some(last),
+            None => self.inner.last_mut().map(|(last, _)| last),
+        }
+    }
 
     pub fn into_pairs(self) -> IntoPairs<V, P> {
         IntoPairs {

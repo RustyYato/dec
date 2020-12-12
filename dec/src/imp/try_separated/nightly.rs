@@ -1,6 +1,6 @@
 use super::*;
 
-use core::ops::Try;
+use std_core::ops::Try;
 
 impl<I, E, P, S, Fp, Fs, MkA, R, A> ParseOnce<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where

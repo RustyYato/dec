@@ -1,19 +1,17 @@
 #![cfg_attr(feature = "nightly", feature(unsized_locals, try_trait))]
-#![deny(unsafe_code)]
-
-#[allow(unsafe_code)]
-mod compare;
+#![forbid(unsafe_code)]
 
 use imp::*;
 
-#[forbid(unsafe_code)]
+extern crate core as std_core;
+
+pub use dec_core as core;
+
 mod imp {
-    pub mod pratt;
     pub mod tag;
 
     pub(crate) mod all;
     pub(crate) mod any;
-    pub(crate) mod context;
     pub(crate) mod fold;
     pub(crate) mod lift;
     pub(crate) mod map;
@@ -33,30 +31,9 @@ mod imp {
     pub(crate) mod utils;
 }
 
-#[forbid(unsafe_code)]
-pub mod bits;
-#[forbid(unsafe_code)]
-pub mod ext;
-#[forbid(unsafe_code)]
-pub mod indexed;
-#[forbid(unsafe_code)]
 pub mod punctuated;
 
-#[forbid(unsafe_code)]
-pub mod error;
-#[forbid(unsafe_code)]
-pub mod iter;
-#[forbid(unsafe_code)]
-pub mod traits;
-
-pub use imp::{pratt, tag};
-
-pub mod prelude {
-    use crate::*;
-
-    pub use error::{Error, ErrorKind, PResult};
-    pub use traits::{Parse, ParseMut, ParseOnce, ParserRef};
-}
+pub use imp::tag;
 
 pub mod branch {
     use crate::*;
@@ -70,7 +47,7 @@ pub mod branch {
 pub mod seq {
     use crate::*;
 
-    use core::ops::{RangeBounds, RangeFrom, RangeFull};
+    use std_core::ops::{RangeBounds, RangeFrom, RangeFull};
 
     pub use all::All;
     pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange, Range};
@@ -164,7 +141,7 @@ pub mod map {
 
     pub fn map<P, F>(parser: P, f: F) -> Map<P, F> { Map(parser, f) }
 
-    pub fn map_err<E, P, F>(parser: P, f: F) -> MapErr<P, F, E> { MapErr(parser, f, core::marker::PhantomData) }
+    pub fn map_err<E, P, F>(parser: P, f: F) -> MapErr<P, F, E> { MapErr(parser, f, std_core::marker::PhantomData) }
 
     pub fn then<P, F>(parser: P, f: F) -> Then<P, F> { Then(parser, f) }
 
@@ -175,18 +152,13 @@ pub mod map {
 
 #[forbid(unsafe_code)]
 pub mod combinator {
-    use crate::{error::ErrorKind, *};
+    use crate::*;
 
-    pub use context::{AppendError, Context};
     pub use lift::{Lift, Lower};
     pub use not::Not;
     pub use optional::Opt;
     pub use recognize::Recognize;
     pub use verify::Verify;
-
-    pub fn context<P>(ctx: &'static str, parser: P) -> Context<P> { Context(ctx, parser) }
-
-    pub fn append_error<P>(kind: ErrorKind, parser: P) -> AppendError<P> { AppendError(kind, parser) }
 
     pub fn lift<P>(parser: P) -> Lift<P> { Lift(parser) }
 
@@ -208,7 +180,7 @@ impl<A> Extend<A> for Ignore {
     fn extend<T: IntoIterator<Item = A>>(&mut self, _: T) {}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Count(pub usize);
 
 impl Count {

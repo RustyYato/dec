@@ -1,4 +1,7 @@
-use crate::{error::ParseError, prelude::*, traits::*};
+use dec_core::{
+    error::{Error, PResult, ParseError},
+    Parse, ParseExt, ParseMut, ParseOnce,
+};
 
 #[cfg(feature = "nightly")]
 mod nightly;

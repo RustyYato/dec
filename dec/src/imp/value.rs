@@ -1,4 +1,7 @@
-use crate::{error::*, prelude::*};
+use dec_core::{
+    error::{PResult, ParseError},
+    Parse, ParseMut, ParseOnce,
+};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

@@ -1,4 +1,4 @@
-use crate::{error::*, prelude::*};
+use crate::{error::*, Parse, ParseExt, ParseMut, ParseOnce};
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
