@@ -5,6 +5,10 @@ use crate::{
     iter::Iter,
 };
 
+#[cfg(feature = "bitvec")]
+#[allow(unsafe_code)]
+mod bits;
+
 #[allow(unsafe_code)]
 mod compare;
 #[forbid(unsafe_code)]
