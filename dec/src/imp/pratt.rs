@@ -1,8 +1,4 @@
-use crate::{
-    error::ParseError,
-    prelude::PResult,
-    traits::{ParseMut, ParseOnce},
-};
+use crate::{error::{ParseError, PrattErrorKind}, prelude::{Error::Error, ErrorKind, PResult}, traits::{ParseMut, ParseOnce}};
 
 use core::convert::Infallible;
 
@@ -106,6 +102,7 @@ impl<Left, Op> Operator<Left, Op, ()> {
     pub fn postfix_op(left: Left, op: Op) -> Self { Self { left, op, right: () } }
 }
 
+#[allow(unused)]
 pub trait Pratt<I, E: ParseError<I>> {
     type BindingPower: Default + Copy + Ord;
     type Value;
@@ -127,34 +124,52 @@ pub trait Pratt<I, E: ParseError<I>> {
         input: I,
     ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E>;
 
-    fn prefix_op(&mut self, input: I) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, ()>;
+    fn prefix_op(&mut self, input: I) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
+        Err(Error(()))
+    }
+
     fn infix_op(
         &mut self,
         input: I,
-    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()>;
-    fn postfix_op(&mut self, input: I) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()>;
+    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()> {
+        Err(Error(()))
+    }
+
+    fn postfix_op(&mut self, input: I) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
+        Err(Error(()))
+    }
 
     fn finish_infix_op(
         &mut self,
         args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E>;
+    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E> {
+        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::FinishInfixOp))))
+    }
 
     fn merge_prefix_op(
         &mut self,
         args: Args<PrefixOp<I, E, Self>, Self::HookMergePrefix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E>;
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
+        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergePrefixOp))))
+    }
+
     fn merge_infix_op(
         &mut self,
         args: Args<InfixOp<I, E, Self>, Self::HookMergeInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E>;
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
+        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergeInfixOp))))
+    }
+
     fn merge_postfix_op(
         &mut self,
         args: Args<PostfixOp<I, E, Self>, Self::HookMergePostfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E>;
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
+        Err(Error(E::from_input_kind(input, ErrorKind::Pratt(PrattErrorKind::MergePostfixOp))))
+    }
 }
 
 impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for &mut P {
@@ -504,32 +519,27 @@ where
                             }
                         }
                         Err(_) => match pratt.infix_op(input.clone()) {
-                            Err(_) => break 'main_loop lhs,
-                            Ok((next_input, infix)) => {
-                                if infix.left < min_bp {
-                                    break 'main_loop lhs
-                                } else {
-                                    let (next_input, inf_op) =
-                                        pratt.finish_infix_op(Args::Normal(infix.op), next_input)?;
+                            Ok((next_input, infix)) if infix.left >= min_bp => {
+                                let (next_input, inf_op) = pratt.finish_infix_op(Args::Normal(infix.op), next_input)?;
 
-                                    stack.push(StackItem {
-                                        min_bp,
-                                        recurse: match inf_op {
-                                            Hook::Complete(inf_op) => {
-                                                min_bp = infix.right;
-                                                Recurse::InfixOp(inf_op, lhs)
-                                            }
-                                            Hook::Recurse(bp, hook) => {
-                                                min_bp = bp;
-                                                Recurse::HookFinishInfix(hook, lhs)
-                                            }
-                                        },
-                                    });
+                                stack.push(StackItem {
+                                    min_bp,
+                                    recurse: match inf_op {
+                                        Hook::Complete(inf_op) => {
+                                            min_bp = infix.right;
+                                            Recurse::InfixOp(inf_op, lhs)
+                                        }
+                                        Hook::Recurse(bp, hook) => {
+                                            min_bp = bp;
+                                            Recurse::HookFinishInfix(hook, lhs)
+                                        }
+                                    },
+                                });
 
-                                    input = next_input;
-                                    continue 'recurse
-                                }
+                                input = next_input;
+                                continue 'recurse
                             }
+                            _ => break 'main_loop lhs,
                         },
                     }
                 };

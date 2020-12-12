@@ -5,6 +5,7 @@
 mod compare;
 
 use imp::*;
+
 #[forbid(unsafe_code)]
 mod imp {
     pub mod pratt;
@@ -50,7 +51,6 @@ pub mod traits;
 
 pub use imp::{pratt, tag};
 
-#[forbid(unsafe_code)]
 pub mod prelude {
     use crate::*;
 

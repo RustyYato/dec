@@ -127,7 +127,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
             }
         }
 
-        Err(Error::Error(
+        Err(Error(
             E::from_input_kind(input, ErrorKind::Custom("Invalid value")).add_context(input, "value"),
         ))
     }

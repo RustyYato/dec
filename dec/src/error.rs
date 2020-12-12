@@ -21,9 +21,17 @@ pub enum ErrorKind {
     Not,
     Verify,
     RangeStart,
+    Pratt(PrattErrorKind),
     Custom(&'static str),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub enum PrattErrorKind {
+    FinishInfixOp,
+    MergePrefixOp,
+    MergeInfixOp,
+    MergePostfixOp,
+}
 pub trait ParseError<I>: Sized {
     fn from_input_kind(input: I, kind: ErrorKind) -> Self;
 
