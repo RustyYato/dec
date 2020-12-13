@@ -93,20 +93,34 @@ pub struct Operator<Left, Op, Right> {
     pub op: Op,
     pub right: Right,
 }
-
-pub struct StackItem<I, E: ParseError<I>, P: Pratt<I, E>> {
-    min_bp: P::BindingPower,
-    recurse: Recurse<I, E, P>,
+mod private {
+    pub struct StackItem<Bp, V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
+        pub(crate) min_bp: Bp,
+        pub(crate) recurse: super::Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo>,
+    }
 }
 
-enum Recurse<I, E: ParseError<I>, P: Pratt<I, E>> {
-    PrefixOp(P::PrefixOp),
-    InfixOp(P::InfixOp, P::Value),
-    Value(P::HookBuildValue),
-    HookFinishInfix(P::HookFinishInfix, P::Value),
-    HookMergePrefix(P::HookMergePrefix),
-    HookMergeInfix(P::HookMergeInfix),
-    HookMergePostfix(P::HookMergePostfix),
+#[allow(type_alias_bounds)]
+pub type StackItem<I, E: ParseError<I>, P: Pratt<I, E>> = private::StackItem<
+    <P as Pratt<I, E>>::BindingPower,
+    <P as Pratt<I, E>>::Value,
+    <P as Pratt<I, E>>::PrefixOp,
+    <P as Pratt<I, E>>::InfixOp,
+    <P as Pratt<I, E>>::HookBuildValue,
+    <P as Pratt<I, E>>::HookFinishInfix,
+    <P as Pratt<I, E>>::HookMergePrefix,
+    <P as Pratt<I, E>>::HookMergeInfix,
+    <P as Pratt<I, E>>::HookMergePostfix,
+>;
+
+enum Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
+    PrefixOp(PO),
+    InfixOp(IO, V),
+    Value(HBV),
+    HookFinishInfix(HFI, V),
+    HookMergePrefix(HMPr),
+    HookMergeInfix(HMI),
+    HookMergePostfix(HMPo),
 }
 
 pub type PrefixOp<I, E, P> = Operator<(), <P as Pratt<I, E>>::PrefixOp, <P as Pratt<I, E>>::Value>;
@@ -496,7 +510,7 @@ where
                     match value {
                         Hook::Complete(value) => $lhs = value,
                         Hook::Recurse(bp, hook) => {
-                            stack.push(StackItem {
+                            stack.push(StackItem::<I, E, P> {
                                 min_bp,
                                 recurse: $g(hook),
                             });
@@ -509,7 +523,7 @@ where
 
             let mut lhs = match pratt.prefix_op(input.clone()) {
                 Ok((next_input, prefix)) => {
-                    stack.push(StackItem {
+                    stack.push(StackItem::<I, E, P> {
                         min_bp,
                         recurse: Recurse::PrefixOp(prefix.op),
                     });
@@ -523,7 +537,7 @@ where
                     match value {
                         Hook::Complete(value) => value,
                         Hook::Recurse(bp, hook) => {
-                            stack.push(StackItem {
+                            stack.push(StackItem::<I, E, P> {
                                 min_bp,
                                 recurse: Recurse::Value(hook),
                             });
@@ -552,7 +566,7 @@ where
                                         continue 'main_loop
                                     }
                                     Hook::Recurse(bp, hook) => {
-                                        stack.push(StackItem {
+                                        stack.push(StackItem::<I, E, P> {
                                             min_bp,
                                             recurse: Recurse::HookMergePostfix(hook),
                                         });
@@ -578,7 +592,7 @@ where
                                     }
                                 };
 
-                                stack.push(StackItem {
+                                stack.push(StackItem::<I, E, P> {
                                     min_bp: old_min_bp,
                                     recurse,
                                 });
@@ -591,7 +605,7 @@ where
                     }
                 };
 
-                let StackItem {
+                let StackItem::<I, E, P> {
                     min_bp: old_min_bp,
                     recurse,
                 } = match stack.pop() {
@@ -621,7 +635,7 @@ where
                         match value {
                             Hook::Complete(value) => lhs = value,
                             Hook::Recurse(bp, hook) => {
-                                stack.push(StackItem {
+                                stack.push(StackItem::<I, E, P> {
                                     min_bp,
                                     recurse: Recurse::HookMergePrefix(hook),
                                 });
@@ -637,7 +651,7 @@ where
                         match value {
                             Hook::Complete(value) => lhs = value,
                             Hook::Recurse(bp, hook) => {
-                                stack.push(StackItem {
+                                stack.push(StackItem::<I, E, P> {
                                     min_bp,
                                     recurse: Recurse::HookMergeInfix(hook),
                                 });
@@ -659,7 +673,7 @@ where
                             }
                         };
 
-                        stack.push(StackItem {
+                        stack.push(StackItem::<I, E, P> {
                             min_bp: old_min_bp,
                             recurse,
                         });
