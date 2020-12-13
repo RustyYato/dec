@@ -42,6 +42,33 @@ impl<T> Stack for Vec<T> {
     fn clear(&mut self) { self.clear() }
 }
 
+#[cfg(feature = "smallvec")]
+impl<A: smallvec::Array> Stack for smallvec::SmallVec<A> {
+    type Item = A::Item;
+
+    fn push(&mut self, value: Self::Item) { self.push(value); }
+    fn pop(&mut self) -> Option<Self::Item> { self.pop() }
+    fn clear(&mut self) { self.clear() }
+}
+
+#[cfg(feature = "arrayvec")]
+impl<A: arrayvec::Array> Stack for arrayvec::ArrayVec<A> {
+    type Item = A::Item;
+
+    fn push(&mut self, value: Self::Item) { self.push(value); }
+    fn pop(&mut self) -> Option<Self::Item> { self.pop() }
+    fn clear(&mut self) { self.clear() }
+}
+
+#[cfg(feature = "generic-vec")]
+impl<T, S: generic_vec::raw::Storage<T>> Stack for generic_vec::GenericVec<T, S> {
+    type Item = T;
+
+    fn push(&mut self, value: Self::Item) { self.push(value); }
+    fn pop(&mut self) -> Option<Self::Item> { self.try_pop() }
+    fn clear(&mut self) { self.clear() }
+}
+
 pub struct RecursePratt<P>(pub P);
 
 pub struct StackPratt<P, S> {

@@ -8,6 +8,14 @@ edition = "2018"
 
 [dependencies]
 dec-core = { path = '../dec-core' }
+smallvec = { version = '1', default-features = false, optional = true }
+arrayvec = { version = '0.5', default-features = false, optional = true }
+
+[dependencies.generic-vec]
+optional = true
+git = 'https://github.com/RustyYato/generic-vec'
+branch = 'main'
+default-features = false
 
 [dev-dependencies]
 dec = { path = '../dec' }
