@@ -13,60 +13,60 @@ mod test;
 pub trait Stack {
     type Item;
 
-    fn clear(&mut self) { while self.pop().is_some() {} }
+    fn len(&self) -> usize;
     fn push(&mut self, value: Self::Item);
-    fn pop(&mut self) -> Option<Self::Item>;
+    fn pop(&mut self) -> Self::Item;
 }
 
 impl<S: ?Sized + Stack> Stack for &mut S {
     type Item = S::Item;
 
-    fn clear(&mut self) { S::clear(self) }
+    fn len(&self) -> usize { S::len(self) }
     fn push(&mut self, value: Self::Item) { S::push(self, value) }
-    fn pop(&mut self) -> Option<Self::Item> { S::pop(self) }
+    fn pop(&mut self) -> Self::Item { S::pop(self) }
 }
 
 impl<S: ?Sized + Stack> Stack for Box<S> {
     type Item = S::Item;
 
-    fn clear(&mut self) { S::clear(self) }
+    fn len(&self) -> usize { S::len(self) }
     fn push(&mut self, value: Self::Item) { S::push(self, value) }
-    fn pop(&mut self) -> Option<Self::Item> { S::pop(self) }
+    fn pop(&mut self) -> Self::Item { S::pop(self) }
 }
 
 impl<T> Stack for Vec<T> {
     type Item = T;
 
+    fn len(&self) -> usize { self.len() }
     fn push(&mut self, value: Self::Item) { self.push(value); }
-    fn pop(&mut self) -> Option<Self::Item> { self.pop() }
-    fn clear(&mut self) { self.clear() }
+    fn pop(&mut self) -> Self::Item { self.pop().unwrap() }
 }
 
 #[cfg(feature = "smallvec")]
 impl<A: smallvec::Array> Stack for smallvec::SmallVec<A> {
     type Item = A::Item;
 
+    fn len(&self) -> usize { self.len() }
     fn push(&mut self, value: Self::Item) { self.push(value); }
-    fn pop(&mut self) -> Option<Self::Item> { self.pop() }
-    fn clear(&mut self) { self.clear() }
+    fn pop(&mut self) -> Self::Item { self.pop().unwrap() }
 }
 
 #[cfg(feature = "arrayvec")]
 impl<A: arrayvec::Array> Stack for arrayvec::ArrayVec<A> {
     type Item = A::Item;
 
+    fn len(&self) -> usize { self.len() }
     fn push(&mut self, value: Self::Item) { self.push(value); }
-    fn pop(&mut self) -> Option<Self::Item> { self.pop() }
-    fn clear(&mut self) { self.clear() }
+    fn pop(&mut self) -> Self::Item { self.pop().unwrap() }
 }
 
 #[cfg(feature = "generic-vec")]
 impl<T, S: generic_vec::raw::Storage<T>> Stack for generic_vec::GenericVec<T, S> {
     type Item = T;
 
+    fn len(&self) -> usize { self.len() }
     fn push(&mut self, value: Self::Item) { self.push(value); }
-    fn pop(&mut self) -> Option<Self::Item> { self.try_pop() }
-    fn clear(&mut self) { self.clear() }
+    fn pop(&mut self) -> Self::Item { self.pop() }
 }
 
 pub struct RecursePratt<P>(pub P);
@@ -93,6 +93,8 @@ pub struct Operator<Left, Op, Right> {
     pub op: Op,
     pub right: Right,
 }
+
+use private::StackItem as RawSI;
 mod private {
     pub struct StackItem<Bp, V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
         pub(crate) min_bp: Bp,
@@ -100,8 +102,13 @@ mod private {
     }
 }
 
+pub enum StackItem<Psi, E = ()> {
+    Raw(Psi),
+    Ext(E),
+}
+
 #[allow(type_alias_bounds)]
-pub type StackItem<I, E: ParseError<I>, P: Pratt<I, E>> = private::StackItem<
+pub type PrattStackItem<I, E: ParseError<I>, P: Pratt<I, E>> = private::StackItem<
     <P as Pratt<I, E>>::BindingPower,
     <P as Pratt<I, E>>::Value,
     <P as Pratt<I, E>>::PrefixOp,
@@ -478,28 +485,28 @@ where
     }
 }
 
-impl<I, E, P, S> ParseOnce<I, E> for StackPratt<P, S>
+impl<I, E, P, S, Ext> ParseOnce<I, E> for StackPratt<P, S>
 where
     I: Clone,
     E: ParseError<I>,
     P: Pratt<I, E>,
-    S: Stack<Item = StackItem<I, E, P>>,
+    S: Stack<Item = StackItem<PrattStackItem<I, E, P>, Ext>>,
 {
     type Output = P::Value;
 
     fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E> { self.parse_mut(input) }
 }
 
-impl<I, E, P, S> ParseMut<I, E> for StackPratt<P, S>
+impl<I, E, P, S, Ext> ParseMut<I, E> for StackPratt<P, S>
 where
     I: Clone,
     E: ParseError<I>,
     P: Pratt<I, E>,
-    S: Stack<Item = StackItem<I, E, P>>,
+    S: Stack<Item = StackItem<PrattStackItem<I, E, P>, Ext>>,
 {
     fn parse_mut(&mut self, mut input: I) -> PResult<I, Self::Output, E> {
         let Self { stack, pratt } = self;
-        stack.clear();
+        let bottom = stack.len();
         let mut min_bp = P::BindingPower::default();
 
         'recurse: loop {
@@ -510,10 +517,10 @@ where
                     match value {
                         Hook::Complete(value) => $lhs = value,
                         Hook::Recurse(bp, hook) => {
-                            stack.push(StackItem::<I, E, P> {
+                            stack.push(StackItem::Raw(RawSI {
                                 min_bp,
                                 recurse: $g(hook),
-                            });
+                            }));
                             min_bp = bp;
                             continue 'recurse
                         }
@@ -523,10 +530,10 @@ where
 
             let mut lhs = match pratt.prefix_op(input.clone()) {
                 Ok((next_input, prefix)) => {
-                    stack.push(StackItem::<I, E, P> {
+                    stack.push(StackItem::Raw(RawSI {
                         min_bp,
                         recurse: Recurse::PrefixOp(prefix.op),
-                    });
+                    }));
                     input = next_input;
                     min_bp = prefix.right;
                     continue
@@ -537,10 +544,10 @@ where
                     match value {
                         Hook::Complete(value) => value,
                         Hook::Recurse(bp, hook) => {
-                            stack.push(StackItem::<I, E, P> {
+                            stack.push(StackItem::Raw(RawSI {
                                 min_bp,
                                 recurse: Recurse::Value(hook),
-                            });
+                            }));
                             min_bp = bp;
                             continue
                         }
@@ -566,10 +573,10 @@ where
                                         continue 'main_loop
                                     }
                                     Hook::Recurse(bp, hook) => {
-                                        stack.push(StackItem::<I, E, P> {
+                                        stack.push(StackItem::Raw(RawSI {
                                             min_bp,
                                             recurse: Recurse::HookMergePostfix(hook),
-                                        });
+                                        }));
                                         min_bp = bp;
                                         continue 'recurse
                                     }
@@ -592,10 +599,10 @@ where
                                     }
                                 };
 
-                                stack.push(StackItem::<I, E, P> {
+                                stack.push(StackItem::Raw(RawSI {
                                     min_bp: old_min_bp,
                                     recurse,
-                                });
+                                }));
 
                                 input = next_input;
                                 continue 'recurse
@@ -605,12 +612,16 @@ where
                     }
                 };
 
-                let StackItem::<I, E, P> {
+                if stack.len() == bottom {
+                    return Ok((input, value))
+                }
+
+                let RawSI {
                     min_bp: old_min_bp,
                     recurse,
                 } = match stack.pop() {
-                    Some(stack_item) => stack_item,
-                    None => return Ok((input, value)),
+                    StackItem::Raw(raw) => raw,
+                    StackItem::Ext(_) => panic!("Encountered an external stack item while processing expressions!"),
                 };
 
                 min_bp = old_min_bp;
@@ -635,10 +646,10 @@ where
                         match value {
                             Hook::Complete(value) => lhs = value,
                             Hook::Recurse(bp, hook) => {
-                                stack.push(StackItem::<I, E, P> {
+                                stack.push(StackItem::Raw(RawSI {
                                     min_bp,
                                     recurse: Recurse::HookMergePrefix(hook),
-                                });
+                                }));
                                 min_bp = bp;
                                 continue 'recurse
                             }
@@ -651,10 +662,10 @@ where
                         match value {
                             Hook::Complete(value) => lhs = value,
                             Hook::Recurse(bp, hook) => {
-                                stack.push(StackItem::<I, E, P> {
+                                stack.push(StackItem::Raw(RawSI {
                                     min_bp,
                                     recurse: Recurse::HookMergeInfix(hook),
-                                });
+                                }));
                                 min_bp = bp;
                                 continue 'recurse
                             }
@@ -673,10 +684,10 @@ where
                             }
                         };
 
-                        stack.push(StackItem::<I, E, P> {
+                        stack.push(StackItem::Raw(RawSI {
                             min_bp: old_min_bp,
                             recurse,
-                        });
+                        }));
 
                         continue 'recurse
                     }

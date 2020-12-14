@@ -1,6 +1,9 @@
 use super::*;
 use dec::{branch::Any, map::Value, tag::tag};
-use dec_core::{ParseOnce, ParseExt, error::{verbose::VerboseError, ErrorKind}};
+use dec_core::{
+    error::{verbose::VerboseError, ErrorKind},
+    ParseExt, ParseOnce,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 enum PrefixOp {
@@ -260,7 +263,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 fn expr(input: &str) -> PResult<&str, Expr<'_>, VerboseError<&str>> {
     StackPratt {
         pratt: ExprParser,
-        stack: Vec::new(),
+        stack: Vec::<crate::StackItem<_>>::new(),
     }
     .parse_once(input.trim_start())
 }
