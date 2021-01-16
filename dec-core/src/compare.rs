@@ -8,6 +8,38 @@ pub struct AnyOf<T>(pub T);
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NoneOf<T>(pub T);
 
+unsafe fn split_at_unchecked(input: &str, index: usize) -> (&str, Option<&str>) {
+    let ptr = input.as_ptr();
+    (
+        &*(core::ptr::slice_from_raw_parts(ptr, input.len() - index) as *const str),
+        Some(&*(core::ptr::slice_from_raw_parts(ptr, index) as *const str)),
+    )
+}
+
+unsafe fn split_at_unchecked_mut(input: &mut str, index: usize) -> (&mut str, Option<&mut str>) {
+    let ptr = input.as_mut_ptr();
+    (
+        &mut *(core::ptr::slice_from_raw_parts_mut(ptr, input.len() - index) as *mut str),
+        Some(&mut *(core::ptr::slice_from_raw_parts_mut(ptr, index) as *mut str)),
+    )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CharRef<T>(T);
+
+impl<T: AsRef<str>> CharRef<T> {
+    pub fn char(&self) -> char {
+        match self.0.as_ref().chars().next() {
+            Some(c) => c,
+            None => unsafe { core::hint::unreachable_unchecked() },
+        }
+    }
+}
+
+impl<T> CharRef<T> {
+    pub fn into_inner(self) -> T { self.0 }
+}
+
 impl<'i, T: PartialEq> Compare<&'i [T]> for [T] {
     type Output = &'i [T];
 
@@ -96,11 +128,11 @@ impl<'i> Compare<&'i [u8]> for &str {
 }
 
 impl<'i> Compare<&'i str> for u8 {
-    type Output = u8;
+    type Output = &'i str;
 
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (unsafe { input.get_unchecked(1..) }, Some(*self))
+            unsafe { split_at_unchecked(input, 1) }
         } else {
             (input, None)
         }
@@ -108,7 +140,7 @@ impl<'i> Compare<&'i str> for u8 {
 }
 
 impl<'i> Compare<&'i str> for AnyOf<&[u8]> {
-    type Output = u8;
+    type Output = &'i str;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
@@ -117,14 +149,14 @@ impl<'i> Compare<&'i str> for AnyOf<&[u8]> {
         }
 
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked(1..) }, Some(b)),
+            Some(&[b]) if self.0.contains(&b) => unsafe { split_at_unchecked(input, 1) },
             _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i str> for NoneOf<&[u8]> {
-    type Output = u8;
+    type Output = &'i str;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
@@ -133,110 +165,104 @@ impl<'i> Compare<&'i str> for NoneOf<&[u8]> {
         }
 
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if !self.0.contains(&b) => (unsafe { input.get_unchecked(1..) }, Some(b)),
+            Some(&[b]) if !self.0.contains(&b) => unsafe { split_at_unchecked(input, 1) },
             _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i [u8]> for char {
-    type Output = char;
+    type Output = &'i [u8];
 
     fn compare(&self, input: &'i [u8]) -> (&'i [u8], Option<Self::Output>) {
-        let s = *self;
         let mut buf = [0; 4];
         let buf = self.encode_utf8(&mut buf).as_bytes();
         let (input, output) = buf.compare(input);
-        (input, output.map(move |_| s))
+        (input, output)
     }
 }
 
 impl<'i> Compare<&'i str> for char {
-    type Output = char;
+    type Output = &'i str;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        let input = input.as_str();
-        match c {
-            Some(output) if output == *self => (input, Some(output)),
-            _ => (old_input, None),
+        unsafe {
+            let (a, b) = self.compare(input.as_bytes());
+            (
+                core::str::from_utf8_unchecked(a),
+                b.map(|b| core::str::from_utf8_unchecked(b)),
+            )
         }
     }
 }
 
 impl<'i> Compare<&'i str> for AnyOf<&str> {
-    type Output = char;
+    type Output = CharRef<&'i str>;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from))
+            return (input, output.map(CharRef))
         }
 
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        let input = input.as_str();
-        match c {
-            Some(output) if self.0.contains(output) => (input, Some(output)),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if self.0.contains(output) => {
+                let (a, b) = unsafe { split_at_unchecked(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i str> for NoneOf<&str> {
-    type Output = char;
+    type Output = CharRef<&'i str>;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = NoneOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from))
+            return (input, output.map(CharRef))
         }
 
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        let input = input.as_str();
-        match c {
-            Some(output) if !self.0.contains(output) => (input, Some(output)),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if !self.0.contains(output) => {
+                let (a, b) = unsafe { split_at_unchecked(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i str> for AnyOf<&[char]> {
-    type Output = char;
+    type Output = CharRef<&'i str>;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        let input = input.as_str();
-        match c {
-            Some(output) if self.0.contains(&output) => (input, Some(output)),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if self.0.contains(&output) => {
+                let (a, b) = unsafe { split_at_unchecked(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i str> for NoneOf<&[char]> {
-    type Output = char;
+    type Output = CharRef<&'i str>;
 
     #[inline]
     fn compare(&self, input: &'i str) -> (&'i str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        let input = input.as_str();
-        match c {
-            Some(output) if !self.0.contains(&output) => (input, Some(output)),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if !self.0.contains(&output) => {
+                let (a, b) = unsafe { split_at_unchecked(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
@@ -331,11 +357,11 @@ impl<'i> Compare<&'i mut [u8]> for &str {
 }
 
 impl<'i> Compare<&'i mut str> for u8 {
-    type Output = u8;
+    type Output = &'i mut str;
 
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
         if input.get(..1).map(str::as_bytes) == Some(&[*self]) {
-            (unsafe { input.get_unchecked_mut(1..) }, Some(*self))
+            unsafe { split_at_unchecked_mut(input, 1) }
         } else {
             (input, None)
         }
@@ -343,7 +369,7 @@ impl<'i> Compare<&'i mut str> for u8 {
 }
 
 impl<'i> Compare<&'i mut str> for AnyOf<&[u8]> {
-    type Output = u8;
+    type Output = &'i mut str;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
@@ -351,14 +377,14 @@ impl<'i> Compare<&'i mut str> for AnyOf<&[u8]> {
             return (input, None)
         }
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked_mut(1..) }, Some(b)),
+            Some(&[b]) if self.0.contains(&b) => unsafe { split_at_unchecked_mut(input, 1) },
             _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i mut str> for NoneOf<&[u8]> {
-    type Output = u8;
+    type Output = &'i mut str;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
@@ -366,120 +392,104 @@ impl<'i> Compare<&'i mut str> for NoneOf<&[u8]> {
             return (input, None)
         }
         match input.get(..1).map(str::as_bytes) {
-            Some(&[b]) if self.0.contains(&b) => (unsafe { input.get_unchecked_mut(1..) }, Some(b)),
+            Some(&[b]) if self.0.contains(&b) => unsafe { split_at_unchecked_mut(input, 1) },
             _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i mut [u8]> for char {
-    type Output = char;
+    type Output = &'i mut [u8];
 
     fn compare(&self, input: &'i mut [u8]) -> (&'i mut [u8], Option<Self::Output>) {
-        let s = *self;
         let mut buf = [0; 4];
         let buf = self.encode_utf8(&mut buf).as_bytes();
         let (input, output) = buf.compare(input);
-        (input, output.map(move |_| s))
+        (input, output)
     }
 }
 
 impl<'i> Compare<&'i mut str> for char {
-    type Output = char;
+    type Output = &'i mut str;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        match c {
-            Some(output) if output == *self => (
-                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
-                Some(output),
-            ),
-            _ => (old_input, None),
+        unsafe {
+            let (a, b) = self.compare(input.as_bytes_mut());
+            (
+                core::str::from_utf8_unchecked_mut(a),
+                b.map(|b| core::str::from_utf8_unchecked_mut(b)),
+            )
         }
     }
 }
 
 impl<'i> Compare<&'i mut str> for AnyOf<&str> {
-    type Output = char;
+    type Output = CharRef<&'i mut str>;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = AnyOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from))
+            return (input, output.map(CharRef))
         }
 
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        match c {
-            Some(output) if self.0.contains(output) => (
-                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
-                Some(output),
-            ),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if self.0.contains(output) => {
+                let (a, b) = unsafe { split_at_unchecked_mut(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i mut str> for NoneOf<&str> {
-    type Output = char;
+    type Output = CharRef<&'i mut str>;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
         if self.0.is_ascii() {
             let (input, output) = NoneOf(self.0.as_bytes()).compare(input);
-            return (input, output.map(char::from))
+            return (input, output.map(CharRef))
         }
 
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        match c {
-            Some(output) if !self.0.contains(output) => (
-                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
-                Some(output),
-            ),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if !self.0.contains(output) => {
+                let (a, b) = unsafe { split_at_unchecked_mut(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i mut str> for AnyOf<&[char]> {
-    type Output = char;
+    type Output = CharRef<&'i mut str>;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        match c {
-            Some(output) if self.0.contains(&output) => (
-                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
-                Some(output),
-            ),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if self.0.contains(&output) => {
+                let (a, b) = unsafe { split_at_unchecked_mut(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }
 
 impl<'i> Compare<&'i mut str> for NoneOf<&[char]> {
-    type Output = char;
+    type Output = CharRef<&'i mut str>;
 
     #[inline]
     fn compare(&self, input: &'i mut str) -> (&'i mut str, Option<Self::Output>) {
-        let old_input = input;
-        let mut input = old_input.chars();
-        let c = input.next();
-        match c {
-            Some(output) if !self.0.contains(&output) => (
-                unsafe { old_input.get_unchecked_mut(output.len_utf8()..) },
-                Some(output),
-            ),
-            _ => (old_input, None),
+        match input.chars().next() {
+            Some(output) if !self.0.contains(&output) => {
+                let (a, b) = unsafe { split_at_unchecked_mut(input, output.len_utf8()) };
+                (a, b.map(CharRef))
+            }
+            _ => (input, None),
         }
     }
 }

@@ -22,7 +22,7 @@ pub mod indexed;
 #[forbid(unsafe_code)]
 mod iter;
 
-pub use compare::{AnyOf, NoneOf};
+pub use compare::{AnyOf, NoneOf, CharRef};
 pub use context::{AppendError, Context};
 pub use ext::{Mut, Ref};
 

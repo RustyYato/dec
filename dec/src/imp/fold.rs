@@ -435,19 +435,19 @@ mod test {
     fn test_range() {
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(range(.., tag('.')), "...input"),
-            Ok(("input", vec!['.'; 3]))
+            Ok(("input", vec!["."; 3]))
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), "...input"),
-            Ok(("..input", vec!['.'; 1]))
+            Ok(("..input", vec!["."; 1]))
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(range(..=2, tag('.')), "...input"),
-            Ok((".input", vec!['.'; 2]))
+            Ok((".input", vec!["."; 2]))
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), ".input"),
-            Ok(("input", vec!['.'; 1]))
+            Ok(("input", vec!["."; 1]))
         );
         assert_eq!(
             ParseOnce::parse_once(range(2.., tag('.')), ".input"),
@@ -455,7 +455,7 @@ mod test {
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(range(2.., tag('.')), "..input"),
-            Ok(("input", vec!['.'; 2]))
+            Ok(("input", vec!["."; 2]))
         );
 
         let parser = Range {

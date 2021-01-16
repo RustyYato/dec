@@ -56,7 +56,7 @@ mod test {
 
     #[test]
     fn test_tag_char() {
-        assert_eq!(ParseOnce::<_, ()>::parse_once(Tag('h'), "hibye"), Ok(("ibye", 'h')));
+        assert_eq!(ParseOnce::<_, ()>::parse_once(Tag('h'), "hibye"), Ok(("ibye", "h")));
         assert_eq!(
             ParseOnce::<_, (&str, ErrorKind)>::parse_once(Tag('h'), "byehi"),
             Err(Error::Error(("byehi", ErrorKind::Tag)))
@@ -67,11 +67,11 @@ mod test {
     fn test_tag_str_from_byte() {
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(Tag('h'), "hibye".as_bytes()),
-            Ok(("ibye".as_bytes(), 'h'))
+            Ok(("ibye".as_bytes(), "h".as_bytes()))
         );
         assert_eq!(
             ParseOnce::<_, ()>::parse_once(Tag('😃'), "😃hibye".as_bytes()),
-            Ok(("hibye".as_bytes(), '😃'))
+            Ok(("hibye".as_bytes(), "😃".as_bytes()))
         );
 
         assert_eq!(
