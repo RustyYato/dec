@@ -3,7 +3,7 @@ use dec_core::{
     Parse, ParseMut, ParseOnce,
 };
 
-use std_core::marker::PhantomData;
+use core::marker::PhantomData;
 
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

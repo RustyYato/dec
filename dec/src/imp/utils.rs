@@ -1,7 +1,7 @@
-use std_core::convert::Infallible;
+use core::convert::Infallible;
 
 #[cfg(feature = "nightly")]
-use std_core::ops::Try;
+use core::ops::Try;
 
 pub fn absurd<T>(x: Infallible) -> T { match x {} }
 pub fn unwrap_absurd<I, T>((i, x): (I, Result<T, Infallible>)) -> (I, T) { (i, x.unwrap_or_else(absurd)) }

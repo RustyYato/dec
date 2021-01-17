@@ -1,4 +1,4 @@
-use std_core::ops::{Bound, RangeBounds};
+use core::ops::{Bound, RangeBounds};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Ranged {

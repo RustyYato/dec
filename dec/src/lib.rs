@@ -7,9 +7,7 @@ extern crate alloc as std;
 
 use imp::*;
 
-extern crate core as std_core;
-
-pub use dec_core as core;
+extern crate core;
 
 mod imp {
     pub mod tag;
@@ -58,7 +56,7 @@ pub mod branch {
 pub mod seq {
     use crate::*;
 
-    use std_core::ops::{RangeBounds, RangeFrom, RangeFull};
+    use core::ops::{RangeBounds, RangeFrom, RangeFull};
 
     pub use all::All;
     pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange, Range};
@@ -158,7 +156,7 @@ pub mod map {
 
     pub fn map<P, F>(parser: P, f: F) -> Map<P, F> { Map(parser, f) }
 
-    pub fn map_err<E, P, F>(parser: P, f: F) -> MapErr<P, F, E> { MapErr(parser, f, std_core::marker::PhantomData) }
+    pub fn map_err<E, P, F>(parser: P, f: F) -> MapErr<P, F, E> { MapErr(parser, f, core::marker::PhantomData) }
 
     pub fn then<P, F>(parser: P, f: F) -> Then<P, F> { Then(parser, f) }
 
