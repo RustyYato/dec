@@ -10,6 +10,7 @@ use core::convert::Infallible;
 #[cfg(test)]
 mod test;
 
+#[allow(clippy::len_without_is_empty)]
 pub trait Stack {
     type Item;
 

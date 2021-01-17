@@ -1,4 +1,4 @@
-use std::ops::RangeBounds;
+use core::ops::RangeBounds;
 
 use dec_core::{
     error::{Error, ErrorKind, PResult, ParseError},
@@ -7,7 +7,8 @@ use dec_core::{
 
 use crate::imp::{map::Map, ranged::Ranged, try_separated::TrySeparatedFold};
 
-pub fn separated<O, P, S, R: std::ops::RangeBounds<usize>>(
+#[cfg(feature = "alloc")]
+pub fn separated<O, P, S, R: RangeBounds<usize>>(
     range: R,
     sep: S,
     item: P,
@@ -20,7 +21,7 @@ pub fn separated<O, P, S, R: std::ops::RangeBounds<usize>>(
     }
 }
 
-pub fn iseparated<P, S, R: std::ops::RangeBounds<usize>>(
+pub fn iseparated<P, S, R: RangeBounds<usize>>(
     range: R,
     sep: S,
     item: P,

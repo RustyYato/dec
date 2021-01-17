@@ -5,7 +5,7 @@ use dec_core::{
 
 use crate::{imp::ranged::Ranged, map::Map, try_fold::TryFold};
 
-use std::ops::RangeBounds;
+use core::ops::RangeBounds;
 
 pub fn fold<P, A: Clone, F>(acc: A, parser: P, func: F) -> Fold<P, impl Fn() -> A + Clone, F> {
     Fold {
@@ -20,7 +20,7 @@ pub fn fold_exact<P, A: Clone, F>(
     acc: A,
     parser: P,
     func: F,
-) -> FoldRange<P, impl Fn() -> A + Clone, F, std::ops::RangeInclusive<usize>> {
+) -> FoldRange<P, impl Fn() -> A + Clone, F, core::ops::RangeInclusive<usize>> {
     FoldRange {
         range: count..=count,
         parser,
@@ -319,7 +319,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod test {
     use super::*;
 

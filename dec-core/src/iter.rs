@@ -16,7 +16,7 @@ pub struct Iter<P, I, E> {
 
 impl<I, E> IterState<I, E> {
     fn take(&mut self) -> Option<I> {
-        match std::mem::replace(self, IterState::Empty) {
+        match core::mem::replace(self, IterState::Empty) {
             IterState::Input(input) => Some(input),
             IterState::Empty => unreachable!(),
             IterState::Error(err) => {
@@ -46,7 +46,7 @@ impl<P, I, E> Iter<P, I, E> {
     pub fn finish(self) -> PResult<I, (), E> { self.state.into() }
 }
 
-impl<P: ParseMut<I, E>, I, E: ParseError<I>> std::iter::FusedIterator for &mut Iter<P, I, E> {}
+impl<P: ParseMut<I, E>, I, E: ParseError<I>> core::iter::FusedIterator for &mut Iter<P, I, E> {}
 impl<P: ParseMut<I, E>, I, E: ParseError<I>> Iterator for &mut Iter<P, I, E> {
     type Item = P::Output;
 

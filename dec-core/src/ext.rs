@@ -3,6 +3,9 @@ use crate::{
     Parse, ParseExt, ParseMut, ParseOnce,
 };
 
+#[cfg(feature = "alloc")]
+use std::boxed::Box;
+
 cfg_match::cfg_match! {
     // TODO: remove FALSE when unsized_locals works again
     all(FALSE, feature = "nightly") => {
@@ -49,6 +52,7 @@ cfg_match::cfg_match! {
     }
 }
 
+#[cfg(feature = "alloc")]
 #[must_use = "parsers are lazy and do nothing unless consumed"]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Own<T: ?Sized>(pub Box<T>);
@@ -64,6 +68,7 @@ impl<T: ?Sized> Clone for Ref<'_, T> {
     fn clone(&self) -> Self { *self }
 }
 
+#[cfg(feature = "alloc")]
 cfg_match::cfg_match! {
     feature = "nightly" => {
         impl<T: ?Sized + ParseOnce<I, E>, I, E: ParseError<I>> ParseOnce<I, E> for Own<T> {

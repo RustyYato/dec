@@ -56,7 +56,7 @@ impl<I> VerboseErrorItem<I> {
     }
 }
 
-impl<I: std::fmt::Debug> ParseError<I> for VerboseError<I> {
+impl<I: core::fmt::Debug> ParseError<I> for VerboseError<I> {
     fn from_input_kind(input: I, kind: ErrorKind) -> Self {
         let mut errors = VecDeque::with_capacity(1);
         errors.push_back(VerboseErrorItem::Item {

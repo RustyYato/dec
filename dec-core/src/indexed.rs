@@ -1,4 +1,7 @@
-use crate::{Compare, InputEq, InputSplit};
+use crate::{
+    error::{CaptureInput, Error, PResult},
+    InputEq, InputSplit, ParseTag, Tag,
+};
 
 use core::ops::Range as Span;
 
@@ -26,7 +29,7 @@ impl<I: InputSplit, P: Pos> InputSplit for Indexed<I, P> {
         self
     }
 
-    fn advance(mut self, at: usize) -> std::result::Result<Self, Self> {
+    fn advance(mut self, at: usize) -> core::result::Result<Self, Self> {
         match self.inner.advance(at) {
             Ok(inner) => {
                 self.inner = inner;
@@ -70,21 +73,27 @@ impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
     fn span(&self) -> Span<P> { self.0.span() }
 }
 
-impl<I: InputSplit, P: Pos, T: Compare<I>> Compare<Indexed<I, P>> for T {
+impl<I: InputSplit, P: Pos, T: Tag<I>> ParseTag<T> for Indexed<I, P> {
     type Output = T::Output;
 
-    fn compare(&self, mut indexed_input: Indexed<I, P>) -> (Indexed<I, P>, Option<Self::Output>) {
-        let len = indexed_input.inner.len();
-        let (input, result) = self.compare(indexed_input.inner);
-        indexed_input.inner = input;
+    fn parse_tag(mut self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>> {
+        let len = self.inner.len();
+        
+        match tag.parse_tag(self.inner) {
+            Err(Error::Error(CaptureInput(input))) => {
+                self.inner = input;
+                Err(Error::Error(CaptureInput(self)))
+            }
+            Err(Error::Failure(CaptureInput(input))) => {
+                self.inner = input;
+                Err(Error::Failure(CaptureInput(self)))
+            }
+            Ok((input, value)) => {
+                self.inner = input;
+                let lexeme_len = len - self.inner.len();
+                self.pos = self.pos.add(lexeme_len);
 
-        match result {
-            None => (indexed_input, None),
-            Some(value) => {
-                let lexeme_len = len - indexed_input.inner.len();
-                indexed_input.pos = indexed_input.pos.add(lexeme_len);
-
-                (indexed_input, Some(value))
+                Ok((self, value))
             }
         }
     }
@@ -95,7 +104,7 @@ macro_rules! imp_pos {
         impl Pos for $type {
             fn add(self, inc: usize) -> Self {
                 #[cfg(debug_assertions)]
-                use std::convert::TryFrom;
+                use core::convert::TryFrom;
                 #[cfg(debug_assertions)]
                 if let Ok(remaining) = usize::try_from(<$type>::MAX - self) {
                     assert!(

@@ -1,5 +1,9 @@
 #![cfg_attr(feature = "nightly", feature(unsized_locals, try_trait))]
 #![forbid(unsafe_code)]
+#![no_std]
+
+#[cfg(all(not(test), feature = "alloc"))]
+extern crate alloc as std;
 
 use imp::*;
 
@@ -17,6 +21,8 @@ mod imp {
     pub(crate) mod map;
     pub(crate) mod not;
     pub(crate) mod optional;
+    #[cfg(all(feature = "rayon", feature = "std"))]
+    pub(crate) mod par_any;
     pub(crate) mod recognize;
     pub(crate) mod separated;
     pub(crate) mod seq;
@@ -31,6 +37,7 @@ mod imp {
     pub(crate) mod utils;
 }
 
+#[cfg(feature = "alloc")]
 pub mod punctuated;
 
 pub use imp::tag;
@@ -39,8 +46,12 @@ pub mod branch {
     use crate::*;
 
     pub use any::Any;
+    #[cfg(all(feature = "rayon", feature = "std"))]
+    pub use par_any::ParAny;
 
     pub fn any<P>(tuple: P) -> Any<P> { Any(tuple) }
+    #[cfg(all(feature = "rayon", feature = "std"))]
+    pub fn par_any<P>(tuple: P) -> ParAny<P> { ParAny(tuple) }
 }
 
 #[forbid(unsafe_code)]
@@ -52,7 +63,9 @@ pub mod seq {
     pub use all::All;
     pub use fold::{fold, fold_exact, fold_range, Fold, FoldRange, Range};
     pub use imp::seq::{Fst, Mid, Snd};
-    pub use separated::{iseparated, separated, SeparatedFold, SeparatedFoldRange, SeparatedRange};
+    #[cfg(feature = "alloc")]
+    pub use separated::separated;
+    pub use separated::{iseparated, SeparatedFold, SeparatedFoldRange, SeparatedRange};
     pub use try_fold::{try_fold, TryFold};
     pub use try_separated::{try_separated_fold, TrySeparatedFold};
     pub use until::{FoldUntil, Until};
@@ -65,6 +78,7 @@ pub mod seq {
 
     pub fn mid<A, B, C>(first: A, second: B, third: C) -> Mid<A, B, C> { Mid(first, second, third) }
 
+    #[cfg(feature = "alloc")]
     pub fn until<O, S, P>(stop: S, parser: P) -> Until<P, S, impl Fn() -> Vec<O> + Copy> {
         Until {
             collection: Vec::new,
@@ -81,6 +95,7 @@ pub mod seq {
         }
     }
 
+    #[cfg(feature = "alloc")]
     pub fn many0<P, O>(parser: P) -> Range<P, RangeFull, impl Copy + Fn() -> Vec<O>> {
         Range {
             parser,
@@ -89,6 +104,7 @@ pub mod seq {
         }
     }
 
+    #[cfg(feature = "alloc")]
     pub fn many1<P, O>(parser: P) -> Range<P, RangeFrom<usize>, impl Copy + Fn() -> Vec<O>> {
         Range {
             parser,
@@ -97,6 +113,7 @@ pub mod seq {
         }
     }
 
+    #[cfg(feature = "alloc")]
     pub fn range<P, O, R: RangeBounds<usize>>(range: R, parser: P) -> Range<P, R, impl Copy + Fn() -> Vec<O>> {
         Range {
             range,

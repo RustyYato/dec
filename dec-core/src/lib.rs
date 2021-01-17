@@ -1,4 +1,8 @@
 #![deny(unsafe_code)]
+#![no_std]
+
+#[cfg(feature = "alloc")]
+extern crate alloc as std;
 
 use crate::{
     error::{DefaultError, PResult, ParseError},
@@ -9,8 +13,6 @@ use crate::{
 #[allow(unsafe_code)]
 mod bits;
 
-#[allow(unsafe_code)]
-mod compare;
 #[forbid(unsafe_code)]
 mod context;
 #[forbid(unsafe_code)]
@@ -21,10 +23,13 @@ mod ext;
 pub mod indexed;
 #[forbid(unsafe_code)]
 mod iter;
+#[allow(unsafe_code)]
+mod tag;
 
-pub use compare::{AnyOf, NoneOf, CharRef};
 pub use context::{AppendError, Context};
+use error::CaptureInput;
 pub use ext::{Mut, Ref};
+pub use tag::{AnyOf, NoneOf};
 
 impl<T: ?Sized> ParseExt for T {}
 pub trait ParseExt {
@@ -95,10 +100,22 @@ pub trait Parse<I, E: ParseError<I> = DefaultError<I>>: ParseMut<I, E> {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E>;
 }
 
-pub trait Compare<I> {
+pub trait ParseTag<T>: Sized {
     type Output;
 
-    fn compare(&self, input: I) -> (I, Option<Self::Output>);
+    fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>>;
+}
+
+pub trait Tag<I> {
+    type Output;
+
+    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>>;
+}
+
+impl<I: ParseTag<T>, T> Tag<I> for T {
+    type Output = I::Output;
+
+    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>> { input.parse_tag(self) }
 }
 
 pub trait InputEq {
@@ -108,13 +125,11 @@ pub trait InputEq {
 pub trait InputSplit: Sized {
     fn len(&self) -> usize;
 
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    fn is_empty(&self) -> bool { self.len() == 0 }
 
     fn cut(self, at: usize) -> Self;
 
-    fn advance(self, at: usize) -> std::result::Result<Self, Self>;
+    fn advance(self, at: usize) -> core::result::Result<Self, Self>;
 }
 
 impl<T> InputSplit for &[T] {
@@ -122,7 +137,7 @@ impl<T> InputSplit for &[T] {
 
     fn cut(self, at: usize) -> Self { &self[..at] }
 
-    fn advance(self, at: usize) -> std::result::Result<Self, Self> {
+    fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         match self.get(at..) {
             Some(x) => Ok(x),
             None => Err(self),
@@ -135,7 +150,7 @@ impl InputSplit for &str {
 
     fn cut(self, at: usize) -> Self { &self[..at] }
 
-    fn advance(self, at: usize) -> std::result::Result<Self, Self> {
+    fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         match self.get(at..) {
             Some(x) => Ok(x),
             None => Err(self),
@@ -148,7 +163,7 @@ impl<T> InputSplit for &mut [T] {
 
     fn cut(self, at: usize) -> Self { &mut self[..at] }
 
-    fn advance(self, at: usize) -> std::result::Result<Self, Self> {
+    fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         if self.len() >= at {
             Ok(&mut self[at..])
         } else {
@@ -162,7 +177,7 @@ impl InputSplit for &mut str {
 
     fn cut(self, at: usize) -> Self { &mut self[..at] }
 
-    fn advance(self, at: usize) -> std::result::Result<Self, Self> {
+    fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         if self.len() >= at && self.is_char_boundary(at) {
             Ok(&mut self[at..])
         } else {
@@ -176,7 +191,7 @@ impl<T> InputEq for &[T] {
         let s: &[T] = self;
         let o: &[T] = other;
 
-        std::ptr::eq(s, o)
+        core::ptr::eq(s, o)
     }
 }
 
@@ -185,7 +200,7 @@ impl InputEq for &str {
         let s: &str = self;
         let o: &str = other;
 
-        std::ptr::eq(s, o)
+        core::ptr::eq(s, o)
     }
 }
 
@@ -194,7 +209,7 @@ impl<T> InputEq for &mut [T] {
         let s: &[T] = self;
         let o: &[T] = other;
 
-        std::ptr::eq(s, o)
+        core::ptr::eq(s, o)
     }
 }
 
@@ -203,6 +218,6 @@ impl InputEq for &mut str {
         let s: &str = self;
         let o: &str = other;
 
-        std::ptr::eq(s, o)
+        core::ptr::eq(s, o)
     }
 }

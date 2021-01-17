@@ -1,4 +1,5 @@
-use std::{ops::RangeBounds, option, slice, vec};
+use core::{ops::RangeBounds, option, slice};
+use std::{vec::Vec, vec};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Punctuated<V, P> {

@@ -8,7 +8,11 @@ edition = "2018"
 
 [features]
 
-default = ['big-tuples']
+# default = ['rayon']
+default = ['big-tuples', 'rayon']
+
+std = ['alloc']
+alloc = []
 
 nightly = []
 big-tuples = []
@@ -16,6 +20,7 @@ big-tuples = []
 [dependencies]
 dec-core = { path = '../dec-core' }
 cfg-match = '0.2'
+rayon = { version = '1', optional = true, default-features = false }
 
 [dev-dependencies]
 criterion = '0.3'
