@@ -1,9 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use dec::tag::tag;
-use dec_core::{error::PResult, ParseOnce};
+use dec_core::{
+    error::{CaptureInput, PResult},
+    ParseOnce,
+};
 
-pub fn separated(input: &[u8]) -> PResult<&[u8], (u32, u32), ()> {
+pub fn separated(input: &[u8]) -> PResult<&[u8], (u32, u32), CaptureInput<&[u8]>> {
     dec::seq::SeparatedFold {
         item: tag(b'a'),
         sep: tag(b'b'),
@@ -14,7 +17,7 @@ pub fn separated(input: &[u8]) -> PResult<&[u8], (u32, u32), ()> {
     .parse_once(input)
 }
 
-pub fn manual(input: &[u8]) -> PResult<&[u8], (u32, u32), ()> {
+pub fn manual(input: &[u8]) -> PResult<&[u8], (u32, u32), CaptureInput<&[u8]>> {
     if input.first() != Some(&b'a') {
         return Ok((input, (0, 0)))
     }

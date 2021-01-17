@@ -44,7 +44,6 @@ fn try_separated_fold_parse_once<I, E, E2, P, S, Fp, Fs, A>(
     acc: A,
 ) -> PResult<I, Result<A, E2>, E>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,

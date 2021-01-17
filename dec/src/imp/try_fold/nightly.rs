@@ -7,7 +7,6 @@ where
     MkA: FnOnce() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> R,
-    I: Clone,
     E: ParseError<I>,
     R: Try<Ok = A>,
 {
@@ -30,7 +29,6 @@ where
     MkA: FnMut() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> R,
-    I: Clone,
     E: ParseError<I>,
     R: Try<Ok = A>,
 {
@@ -51,7 +49,6 @@ where
     MkA: Fn() -> A,
     P: Parse<I, E>,
     F: Fn(A, P::Output) -> R,
-    I: Clone,
     E: ParseError<I>,
     R: Try<Ok = A>,
 {

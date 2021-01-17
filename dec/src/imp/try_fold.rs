@@ -33,11 +33,10 @@ fn try_fold_parse_once<P, A, F, I, E, E2>(
 where
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> Result<A, E2>,
-    I: Clone,
     E: ParseError<I>,
 {
     loop {
-        break match parser.parse_mut(input.clone()) {
+        break match parser.parse_mut(input) {
             Ok((i, out)) => {
                 input = i;
                 match func(acc, out) {
@@ -48,7 +47,7 @@ where
                     Err(err) => Ok((input, Err(err))),
                 }
             }
-            Err(Error::Error(_)) => Ok((input, Ok(acc))),
+            Err(Error::Error(err)) => Ok((err.into_input(), Ok(acc))),
             Err(err) => Err(err),
         }
     }

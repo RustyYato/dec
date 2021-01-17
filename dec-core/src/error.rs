@@ -46,15 +46,17 @@ pub trait ParseError<I>: Sized {
     fn add_context(self, input: I, ctx: &'static str) -> Self { self }
 
     fn or(self, other: Self) -> Self;
+
+    fn into_input(self) -> I;
 }
 
-impl<I> ParseError<I> for () {
-    fn from_input_kind(_: I, _: ErrorKind) -> Self {}
+// impl<I> ParseError<I> for () {
+//     fn from_input_kind(_: I, _: ErrorKind) -> Self {}
 
-    fn append(self, _: I, _: ErrorKind) -> Self { self }
+//     fn append(self, _: I, _: ErrorKind) -> Self { self }
 
-    fn or(self, _: Self) -> Self { self }
-}
+//     fn or(self, _: Self) -> Self { self }
+// }
 
 impl<I> ParseError<I> for core::convert::Infallible {
     fn from_input_kind(_: I, kind: ErrorKind) -> Self {
@@ -64,6 +66,8 @@ impl<I> ParseError<I> for core::convert::Infallible {
     fn append(self, _: I, _: ErrorKind) -> Self { self }
 
     fn or(self, _: Self) -> Self { self }
+
+    fn into_input(self) -> I { match self {} }
 }
 
 impl<I> ParseError<I> for (I, ErrorKind) {
@@ -72,6 +76,8 @@ impl<I> ParseError<I> for (I, ErrorKind) {
     fn append(self, _: I, _: ErrorKind) -> Self { self }
 
     fn or(self, _: Self) -> Self { self }
+
+    fn into_input(self) -> I { self.0 }
 }
 
 impl<I> ParseError<I> for CaptureInput<I> {
@@ -80,4 +86,6 @@ impl<I> ParseError<I> for CaptureInput<I> {
     fn append(self, _: I, _: ErrorKind) -> Self { self }
 
     fn or(self, _: Self) -> Self { self }
+
+    fn into_input(self) -> I { self.0 }
 }

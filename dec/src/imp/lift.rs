@@ -49,7 +49,6 @@ where
 impl<P, I, E, O> ParseOnce<I, E> for Lift<P>
 where
     P: ParseOnce<I, E, Output = Result<O, E>>,
-    I: Clone,
     E: ParseError<I>,
 {
     type Output = O;
@@ -66,7 +65,6 @@ where
 impl<P, I, E, O> ParseMut<I, E> for Lift<P>
 where
     P: ParseMut<I, E, Output = Result<O, E>>,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Lift(self.0.by_mut()).parse_once(input) }
@@ -75,7 +73,6 @@ where
 impl<P, I, E, O> Parse<I, E> for Lift<P>
 where
     P: Parse<I, E, Output = Result<O, E>>,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Lift(self.0.by_ref()).parse_once(input) }

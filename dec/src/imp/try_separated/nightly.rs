@@ -4,7 +4,6 @@ use std_core::ops::Try;
 
 impl<I, E, P, S, Fp, Fs, MkA, R, A> ParseOnce<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -37,7 +36,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, R, A> ParseMut<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -68,7 +66,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, R, A> Parse<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: Parse<I, E>,
     S: Parse<I, E>,

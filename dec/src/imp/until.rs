@@ -26,7 +26,6 @@ where
     P: ParseMut<I, E>,
     Q: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     type Output = (A, Q::Output);
@@ -42,13 +41,13 @@ where
         let mut acc = mk_acc();
 
         loop {
-            match stop.parse_mut(input.clone()) {
-                Err(Error::Error(_)) => (),
+            let i = match stop.parse_mut(input) {
+                Err(Error::Error(err)) => err.into_input(),
                 Err(err @ Error::Failure(_)) => return Err(err),
                 Ok((input, stop)) => return Ok((input, (acc, stop))),
-            }
+            };
 
-            let (i, value) = parser.parse_mut(input)?;
+            let (i, value) = parser.parse_mut(i)?;
 
             input = i;
             acc = func(acc, value);
@@ -62,7 +61,6 @@ where
     P: ParseMut<I, E>,
     Q: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
@@ -89,7 +87,6 @@ where
     P: Parse<I, E>,
     Q: Parse<I, E>,
     F: Fn(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {

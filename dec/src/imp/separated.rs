@@ -66,7 +66,6 @@ pub struct SeparatedRange<P, S, R, MkC> {
 
 impl<I, E, P, S, Fp, Fs, MkA, A> ParseOnce<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -99,7 +98,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A> ParseMut<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     S: ParseMut<I, E>,
     P: ParseMut<I, E>,
@@ -129,7 +127,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A> Parse<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     S: Parse<I, E>,
     P: Parse<I, E>,
@@ -159,7 +156,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseOnce<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -226,7 +222,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseMut<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -259,7 +254,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A, R> Parse<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
-    I: Clone,
     E: ParseError<I>,
     P: Parse<I, E>,
     S: Parse<I, E>,
@@ -292,7 +286,6 @@ where
 
 impl<I, E, P, S, R, MkC, C> ParseOnce<I, E> for SeparatedRange<P, S, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -324,7 +317,6 @@ where
 
 impl<I, E, P, S, R, MkC, C> ParseMut<I, E> for SeparatedRange<P, S, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -352,7 +344,6 @@ where
 
 impl<I, E, P, S, R, MkC, C> Parse<I, E> for SeparatedRange<P, S, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: Parse<I, E>,
     S: Parse<I, E>,

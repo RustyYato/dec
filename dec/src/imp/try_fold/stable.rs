@@ -5,7 +5,6 @@ where
     MkA: FnOnce() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> Result<A, E2>,
-    I: Clone,
     E: ParseError<I>,
 {
     type Output = Result<A, E2>;
@@ -21,7 +20,6 @@ where
     MkA: FnMut() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> Result<A, E2>,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
@@ -35,7 +33,6 @@ where
     MkA: Fn() -> A,
     P: Parse<I, E>,
     F: Fn(A, P::Output) -> Result<A, E2>,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {

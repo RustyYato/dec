@@ -65,7 +65,6 @@ where
     MkA: FnOnce() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     type Output = A;
@@ -88,7 +87,6 @@ where
     MkA: FnMut() -> A,
     P: ParseMut<I, E>,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
@@ -108,7 +106,6 @@ where
     MkA: Fn() -> A,
     P: Parse<I, E>,
     F: Fn(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
@@ -129,7 +126,6 @@ where
     P: ParseMut<I, E>,
     MkA: FnOnce() -> A,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     type Output = A;
@@ -188,7 +184,6 @@ where
     P: ParseMut<I, E>,
     MkA: FnMut() -> A,
     F: FnMut(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
@@ -215,7 +210,6 @@ where
     P: Parse<I, E>,
     MkA: Fn() -> A,
     F: Fn(A, P::Output) -> A,
-    I: Clone,
     E: ParseError<I>,
 {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
@@ -246,7 +240,6 @@ pub struct Range<P, R, MkC> {
 
 impl<I, E, P, R, MkC, C> ParseOnce<I, E> for Range<P, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     R: RangeBounds<usize>,
@@ -273,7 +266,6 @@ where
 
 impl<I, E, P, R, MkC, C> ParseMut<I, E> for Range<P, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     R: RangeBounds<usize> + Clone,
@@ -297,7 +289,6 @@ where
 
 impl<I, E, P, R, MkC, C> Parse<I, E> for Range<P, R, MkC>
 where
-    I: Clone,
     E: ParseError<I>,
     P: Parse<I, E>,
     R: RangeBounds<usize> + Clone,

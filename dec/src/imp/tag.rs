@@ -43,11 +43,16 @@ where
 
 #[cfg(test)]
 mod test {
+    use dec_core::error::DefaultError;
+
     use super::*;
 
     #[test]
     fn test_tag_str() {
-        assert_eq!(ParseOnce::<_, ()>::parse_once(Tag("hi"), "hibye"), Ok(("bye", "hi")));
+        assert_eq!(
+            ParseOnce::<_, DefaultError<_>>::parse_once(Tag("hi"), "hibye"),
+            Ok(("bye", "hi"))
+        );
         assert_eq!(
             ParseOnce::<_, (&str, ErrorKind)>::parse_once(Tag("hi"), "byehi"),
             Err(Error::Error(("byehi", ErrorKind::Tag)))
@@ -57,7 +62,7 @@ mod test {
     #[test]
     fn test_tag_char() {
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(Tag('h'), "hibye"),
+            ParseOnce::<_, DefaultError<_>>::parse_once(Tag('h'), "hibye"),
             Ok(("ibye", "h"))
         );
         assert_eq!(
@@ -69,11 +74,11 @@ mod test {
     #[test]
     fn test_tag_str_from_byte() {
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(Tag('h'), "hibye".as_bytes()),
+            ParseOnce::<_, DefaultError<_>>::parse_once(Tag('h'), "hibye".as_bytes()),
             Ok(("ibye".as_bytes(), "h"))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(Tag('😃'), "😃hibye".as_bytes()),
+            ParseOnce::<_, DefaultError<_>>::parse_once(Tag('😃'), "😃hibye".as_bytes()),
             Ok(("hibye".as_bytes(), "😃"))
         );
 

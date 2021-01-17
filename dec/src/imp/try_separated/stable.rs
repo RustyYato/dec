@@ -2,7 +2,6 @@ use super::*;
 
 impl<I, E, P, S, Fp, Fs, MkA, A, E2> ParseOnce<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -26,7 +25,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A, E2> ParseMut<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: ParseMut<I, E>,
     S: ParseMut<I, E>,
@@ -48,7 +46,6 @@ where
 
 impl<I, E, P, S, Fp, Fs, MkA, A, E2> Parse<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    I: Clone,
     E: ParseError<I>,
     P: Parse<I, E>,
     S: Parse<I, E>,

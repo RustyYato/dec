@@ -122,4 +122,23 @@ impl<I: core::fmt::Debug> ParseError<I> for VerboseError<I> {
 
         self
     }
+
+    fn into_input(mut self) -> I {
+        let mut parent = match self.errors.pop_back().unwrap() {
+            VerboseErrorItem::Alt { parent } => parent,
+            VerboseErrorItem::Item { input, .. } => return input,
+        };
+
+        while let Some(p) = parent {
+            parent = match self.errors[p] {
+                VerboseErrorItem::Alt { parent } => parent,
+                VerboseErrorItem::Item { .. } => match self.errors.swap_remove_back(p) {
+                    Some(VerboseErrorItem::Item { input, .. }) => return input,
+                    _ => unreachable!(),
+                },
+            };
+        }
+
+        unreachable!()
+    }
 }
