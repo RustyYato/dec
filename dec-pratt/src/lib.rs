@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use dec_core::{
-    error::{Error::Error, ErrorKind, PResult, ParseError, PrattErrorKind},
+    error::{CaptureInput, Error::Error, ErrorKind, PResult, ParseError, PrattErrorKind},
     ParseMut, ParseOnce,
 };
 
@@ -109,16 +109,16 @@ pub enum StackItem<Psi, E = ()> {
 }
 
 #[allow(type_alias_bounds)]
-pub type PrattStackItem<I, E: ParseError<I>, P: Pratt<I, E>> = private::StackItem<
-    <P as Pratt<I, E>>::BindingPower,
-    <P as Pratt<I, E>>::Value,
-    <P as Pratt<I, E>>::PrefixOp,
-    <P as Pratt<I, E>>::InfixOp,
-    <P as Pratt<I, E>>::HookBuildValue,
-    <P as Pratt<I, E>>::HookFinishInfix,
-    <P as Pratt<I, E>>::HookMergePrefix,
-    <P as Pratt<I, E>>::HookMergeInfix,
-    <P as Pratt<I, E>>::HookMergePostfix,
+pub type PrattStackItem<I, E: ParseError<I>, F, P: Pratt<I, E, F>> = private::StackItem<
+    <P as Pratt<I, E, F>>::BindingPower,
+    <P as Pratt<I, E, F>>::Value,
+    <P as Pratt<I, E, F>>::PrefixOp,
+    <P as Pratt<I, E, F>>::InfixOp,
+    <P as Pratt<I, E, F>>::HookBuildValue,
+    <P as Pratt<I, E, F>>::HookFinishInfix,
+    <P as Pratt<I, E, F>>::HookMergePrefix,
+    <P as Pratt<I, E, F>>::HookMergeInfix,
+    <P as Pratt<I, E, F>>::HookMergePostfix,
 >;
 
 enum Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
@@ -131,9 +131,12 @@ enum Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
     HookMergePostfix(HMPo),
 }
 
-pub type PrefixOp<I, E, P> = Operator<(), <P as Pratt<I, E>>::PrefixOp, <P as Pratt<I, E>>::Value>;
-pub type InfixOp<I, E, P> = Operator<<P as Pratt<I, E>>::Value, <P as Pratt<I, E>>::InfixOp, <P as Pratt<I, E>>::Value>;
-pub type PostfixOp<I, E, P> = Operator<<P as Pratt<I, E>>::Value, <P as Pratt<I, E>>::PostfixOp, ()>;
+pub type PrefixOp<P, I, E, F = core::convert::Infallible> =
+    Operator<(), <P as Pratt<I, E, F>>::PrefixOp, <P as Pratt<I, E, F>>::Value>;
+pub type InfixOp<P, I, E, F = core::convert::Infallible> =
+    Operator<<P as Pratt<I, E, F>>::Value, <P as Pratt<I, E, F>>::InfixOp, <P as Pratt<I, E, F>>::Value>;
+pub type PostfixOp<P, I, E, F = core::convert::Infallible> =
+    Operator<<P as Pratt<I, E, F>>::Value, <P as Pratt<I, E, F>>::PostfixOp, ()>;
 
 impl<N, V> Args<N, Infallible, V> {
     pub fn always_normal(self) -> N {
@@ -157,7 +160,7 @@ impl<Left, Op> Operator<Left, Op, ()> {
 }
 
 #[allow(unused)]
-pub trait Pratt<I, E: ParseError<I>> {
+pub trait Pratt<I, E: ParseError<I>, F = core::convert::Infallible> {
     type BindingPower: Default + Copy + Ord;
     type Value;
 
@@ -176,28 +179,34 @@ pub trait Pratt<I, E: ParseError<I>> {
         &mut self,
         args: Args<(), Self::HookBuildValue, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E>;
+    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E, F>;
 
-    fn prefix_op(&mut self, input: I) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
-        Err(Error(()))
+    fn prefix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, CaptureInput<I>, F> {
+        Err(Error(CaptureInput(input)))
     }
 
     fn infix_op(
         &mut self,
         input: I,
-    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()> {
-        Err(Error(()))
+    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, CaptureInput<I>, F> {
+        Err(Error(CaptureInput(input)))
     }
 
-    fn postfix_op(&mut self, input: I) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
-        Err(Error(()))
+    fn postfix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, CaptureInput<I>, F> {
+        Err(Error(CaptureInput(input)))
     }
 
     fn finish_infix_op(
         &mut self,
         args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         Err(Error(E::from_input_kind(
             input,
             ErrorKind::Pratt(PrattErrorKind::FinishInfixOp),
@@ -206,9 +215,9 @@ pub trait Pratt<I, E: ParseError<I>> {
 
     fn merge_prefix_op(
         &mut self,
-        args: Args<PrefixOp<I, E, Self>, Self::HookMergePrefix, Self::Value>,
+        args: Args<PrefixOp<Self, I, E, F>, Self::HookMergePrefix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E, F> {
         Err(Error(E::from_input_kind(
             input,
             ErrorKind::Pratt(PrattErrorKind::MergePrefixOp),
@@ -217,9 +226,9 @@ pub trait Pratt<I, E: ParseError<I>> {
 
     fn merge_infix_op(
         &mut self,
-        args: Args<InfixOp<I, E, Self>, Self::HookMergeInfix, Self::Value>,
+        args: Args<InfixOp<Self, I, E, F>, Self::HookMergeInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E, F> {
         Err(Error(E::from_input_kind(
             input,
             ErrorKind::Pratt(PrattErrorKind::MergeInfixOp),
@@ -228,9 +237,9 @@ pub trait Pratt<I, E: ParseError<I>> {
 
     fn merge_postfix_op(
         &mut self,
-        args: Args<PostfixOp<I, E, Self>, Self::HookMergePostfix, Self::Value>,
+        args: Args<PostfixOp<Self, I, E, F>, Self::HookMergePostfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E, F> {
         Err(Error(E::from_input_kind(
             input,
             ErrorKind::Pratt(PrattErrorKind::MergePostfixOp),
@@ -238,7 +247,7 @@ pub trait Pratt<I, E: ParseError<I>> {
     }
 }
 
-impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for &mut P {
+impl<I, E: ParseError<I>, F, P: Pratt<I, E, F> + ?Sized> Pratt<I, E, F> for &mut P {
     type BindingPower = P::BindingPower;
     type Value = P::Value;
 
@@ -257,22 +266,28 @@ impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for &mut P {
         &mut self,
         args: Args<(), Self::HookBuildValue, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E, F> {
         P::value(self, args, input)
     }
 
-    fn prefix_op(&mut self, input: I) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
+    fn prefix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, CaptureInput<I>, F> {
         P::prefix_op(self, input)
     }
 
     fn infix_op(
         &mut self,
         input: I,
-    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()> {
+    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, CaptureInput<I>, F> {
         P::infix_op(self, input)
     }
 
-    fn postfix_op(&mut self, input: I) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
+    fn postfix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, CaptureInput<I>, F> {
         P::postfix_op(self, input)
     }
 
@@ -280,36 +295,36 @@ impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for &mut P {
         &mut self,
         args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         P::finish_infix_op(self, args, input)
     }
 
     fn merge_prefix_op(
         &mut self,
-        args: Args<PrefixOp<I, E, Self>, Self::HookMergePrefix, Self::Value>,
+        args: Args<PrefixOp<Self, I, E, F>, Self::HookMergePrefix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E, F> {
         P::merge_prefix_op(self, args, input)
     }
 
     fn merge_infix_op(
         &mut self,
-        args: Args<InfixOp<I, E, Self>, Self::HookMergeInfix, Self::Value>,
+        args: Args<InfixOp<Self, I, E, F>, Self::HookMergeInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E, F> {
         P::merge_infix_op(self, args, input)
     }
 
     fn merge_postfix_op(
         &mut self,
-        args: Args<PostfixOp<I, E, Self>, Self::HookMergePostfix, Self::Value>,
+        args: Args<PostfixOp<Self, I, E, F>, Self::HookMergePostfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E, F> {
         P::merge_postfix_op(self, args, input)
     }
 }
 
-impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for Box<P> {
+impl<I, E: ParseError<I>, F, P: Pratt<I, E, F> + ?Sized> Pratt<I, E, F> for Box<P> {
     type BindingPower = P::BindingPower;
     type Value = P::Value;
 
@@ -328,22 +343,28 @@ impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for Box<P> {
         &mut self,
         args: Args<(), Self::HookBuildValue, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookBuildValue, Self::BindingPower>, E, F> {
         P::value(self, args, input)
     }
 
-    fn prefix_op(&mut self, input: I) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
+    fn prefix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<(), Self::PrefixOp, Self::BindingPower>, CaptureInput<I>, F> {
         P::prefix_op(self, input)
     }
 
     fn infix_op(
         &mut self,
         input: I,
-    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()> {
+    ) -> PResult<I, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, CaptureInput<I>, F> {
         P::infix_op(self, input)
     }
 
-    fn postfix_op(&mut self, input: I) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
+    fn postfix_op(
+        &mut self,
+        input: I,
+    ) -> PResult<I, Operator<Self::BindingPower, Self::PostfixOp, ()>, CaptureInput<I>, F> {
         P::postfix_op(self, input)
     }
 
@@ -351,46 +372,46 @@ impl<I, E: ParseError<I>, P: Pratt<I, E> + ?Sized> Pratt<I, E> for Box<P> {
         &mut self,
         args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         P::finish_infix_op(self, args, input)
     }
 
     fn merge_prefix_op(
         &mut self,
-        args: Args<PrefixOp<I, E, Self>, Self::HookMergePrefix, Self::Value>,
+        args: Args<PrefixOp<Self, I, E, F>, Self::HookMergePrefix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E, F> {
         P::merge_prefix_op(self, args, input)
     }
 
     fn merge_infix_op(
         &mut self,
-        args: Args<InfixOp<I, E, Self>, Self::HookMergeInfix, Self::Value>,
+        args: Args<InfixOp<Self, I, E, F>, Self::HookMergeInfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E, F> {
         P::merge_infix_op(self, args, input)
     }
 
     fn merge_postfix_op(
         &mut self,
-        args: Args<PostfixOp<I, E, Self>, Self::HookMergePostfix, Self::Value>,
+        args: Args<PostfixOp<Self, I, E, F>, Self::HookMergePostfix, Self::Value>,
         input: I,
-    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
+    ) -> PResult<I, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E, F> {
         P::merge_postfix_op(self, args, input)
     }
 }
 
-fn unwrap<I, E, T, C, P, A, F>(
+fn unwrap<I, E, F, T, C, P, A, Func>(
     pratt: &mut P,
     mut result: Hook<T, C, P::BindingPower>,
     mut input: I,
-    mut f: F,
-) -> PResult<I, T, E>
+    mut f: Func,
+) -> PResult<I, T, E, F>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
-    F: FnMut(&mut P, Args<A, C, P::Value>, I) -> PResult<I, Hook<T, C, P::BindingPower>, E>,
+    P: Pratt<I, E, F>,
+    Func: FnMut(&mut P, Args<A, C, P::Value>, I) -> PResult<I, Hook<T, C, P::BindingPower>, E, F>,
 {
     loop {
         match result {
@@ -405,11 +426,11 @@ where
     }
 }
 
-fn recurse_pratt<I, E, P>(pratt: &mut P, input: I, min_bp: P::BindingPower) -> PResult<I, P::Value, E>
+fn recurse_pratt<I, E, F, P>(pratt: &mut P, input: I, min_bp: P::BindingPower) -> PResult<I, P::Value, E, F>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
+    P: Pratt<I, E, F>,
 {
     let (mut input, mut lhs) = match pratt.prefix_op(input.clone()) {
         Err(_) => {
@@ -463,49 +484,49 @@ where
     Ok((input, lhs))
 }
 
-impl<I, E, P> ParseOnce<I, E> for RecursePratt<P>
+impl<I, E, F, P> ParseOnce<I, E, F> for RecursePratt<P>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
+    P: Pratt<I, E, F>,
 {
     type Output = P::Value;
 
-    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E> { self.parse_mut(input) }
+    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E, F> { self.parse_mut(input) }
 }
 
-impl<I, E, P> ParseMut<I, E> for RecursePratt<P>
+impl<I, E, F, P> ParseMut<I, E, F> for RecursePratt<P>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
+    P: Pratt<I, E, F>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, F> {
         let Self(pratt) = self;
         recurse_pratt(pratt, input, Default::default())
     }
 }
 
-impl<I, E, P, S, Ext> ParseOnce<I, E> for StackPratt<P, S>
+impl<I, E, F, P, S, Ext> ParseOnce<I, E, F> for StackPratt<P, S>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
-    S: Stack<Item = StackItem<PrattStackItem<I, E, P>, Ext>>,
+    P: Pratt<I, E, F>,
+    S: Stack<Item = StackItem<PrattStackItem<I, E, F, P>, Ext>>,
 {
     type Output = P::Value;
 
-    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E> { self.parse_mut(input) }
+    fn parse_once(mut self, input: I) -> PResult<I, Self::Output, E, F> { self.parse_mut(input) }
 }
 
-impl<I, E, P, S, Ext> ParseMut<I, E> for StackPratt<P, S>
+impl<I, E, F, P, S, Ext> ParseMut<I, E, F> for StackPratt<P, S>
 where
     I: Clone,
     E: ParseError<I>,
-    P: Pratt<I, E>,
-    S: Stack<Item = StackItem<PrattStackItem<I, E, P>, Ext>>,
+    P: Pratt<I, E, F>,
+    S: Stack<Item = StackItem<PrattStackItem<I, E, F, P>, Ext>>,
 {
-    fn parse_mut(&mut self, mut input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, mut input: I) -> PResult<I, Self::Output, E, F> {
         let Self { stack, pratt } = self;
         let bottom = stack.len();
         let mut min_bp = P::BindingPower::default();

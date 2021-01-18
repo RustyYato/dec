@@ -1,12 +1,12 @@
 use super::{ErrorKind, ParseError};
 use std::collections::VecDeque;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct VerboseError<I> {
     pub errors: VecDeque<VerboseErrorItem<I>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum VerboseErrorItem<I> {
     Alt {
         parent: Option<usize>,
@@ -18,7 +18,7 @@ pub enum VerboseErrorItem<I> {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 /// error context for `VerboseError`
 pub enum VerboseErrorKind {
     /// static string added by the `context` function

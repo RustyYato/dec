@@ -1,5 +1,5 @@
 pub type DefaultError<I> = (I, ErrorKind);
-pub type PResult<I, T, E = DefaultError<I>, F = E> = core::result::Result<(I, T), Error<E, F>>;
+pub type PResult<I, T, E = DefaultError<I>, F = core::convert::Infallible> = core::result::Result<(I, T), Error<E, F>>;
 
 #[cfg(feature = "alloc")]
 pub mod verbose;

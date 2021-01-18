@@ -1,13 +1,13 @@
-#![cfg(FALSE)]
-
 // FIXME - tests aren't compliant with newest versions of dec
 
 use super::*;
 use dec::{branch::Any, map::Value, tag::tag};
 use dec_core::{
-    error::{verbose::VerboseError, ErrorKind},
+    error::{verbose::VerboseError, CaptureInput, ErrorKind},
     ParseExt, ParseOnce,
 };
+
+use core::convert::Infallible;
 
 #[derive(Debug, PartialEq, Eq)]
 enum PrefixOp {
@@ -142,7 +142,10 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
         ))
     }
 
-    fn prefix_op(&mut self, input: &'i str) -> PResult<&'i str, Operator<(), Self::PrefixOp, Self::BindingPower>, ()> {
+    fn prefix_op(
+        &mut self,
+        input: &'i str,
+    ) -> PResult<&'i str, Operator<(), Self::PrefixOp, Self::BindingPower>, CaptureInput<&'i str>, Infallible> {
         let (input, prefix) = Any((
             Value(Operator::prefix_op(PrefixOp::Pos, 11), tag('+')),
             Value(Operator::prefix_op(PrefixOp::Neg, 11), tag('-')),
@@ -157,7 +160,12 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
     fn infix_op(
         &mut self,
         input: &'i str,
-    ) -> PResult<&'i str, Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>, ()> {
+    ) -> PResult<
+        &'i str,
+        Operator<Self::BindingPower, Self::FastInfixOp, Self::BindingPower>,
+        CaptureInput<&'i str>,
+        Infallible,
+    > {
         use self::{InfixOp::Simple, Simple::*};
 
         Any((
@@ -177,7 +185,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
     fn postfix_op(
         &mut self,
         input: &'i str,
-    ) -> PResult<&'i str, Operator<Self::BindingPower, Self::PostfixOp, ()>, ()> {
+    ) -> PResult<&'i str, Operator<Self::BindingPower, Self::PostfixOp, ()>, CaptureInput<&'i str>, Infallible> {
         Any((
             Value(Operator::postfix_op(13, PostfixOp::Bang), tag('!')),
             Value(Operator::postfix_op(13, PostfixOp::Index(())), tag('[')),
@@ -212,7 +220,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 
     fn merge_prefix_op(
         &mut self,
-        args: Args<super::PrefixOp<&'i str, E, Self>, Self::HookMergePrefix, Self::Value>,
+        args: Args<super::PrefixOp<Self, &'i str, E>, Self::HookMergePrefix, Self::Value>,
         input: &'i str,
     ) -> PResult<&'i str, Hook<Self::Value, Self::HookMergePrefix, Self::BindingPower>, E> {
         let Operator {
@@ -225,7 +233,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 
     fn merge_infix_op(
         &mut self,
-        args: Args<super::InfixOp<&'i str, E, Self>, Self::HookMergeInfix, Self::Value>,
+        args: Args<super::InfixOp<Self, &'i str, E>, Self::HookMergeInfix, Self::Value>,
         input: &'i str,
     ) -> PResult<&'i str, Hook<Self::Value, Self::HookMergeInfix, Self::BindingPower>, E> {
         let Operator {
@@ -241,7 +249,7 @@ impl<'i, E: ParseError<&'i str>> Pratt<&'i str, E> for ExprParser {
 
     fn merge_postfix_op(
         &mut self,
-        args: Args<super::PostfixOp<&'i str, E, Self>, Self::HookMergePostfix, Self::Value>,
+        args: Args<super::PostfixOp<Self, &'i str, E>, Self::HookMergePostfix, Self::Value>,
         input: &'i str,
     ) -> PResult<&'i str, Hook<Self::Value, Self::HookMergePostfix, Self::BindingPower>, E> {
         let input = input.trim_start();

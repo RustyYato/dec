@@ -86,17 +86,17 @@ pub trait ParseExt {
     }
 }
 
-pub trait ParseOnce<I, E = DefaultError<I>, F = E> {
+pub trait ParseOnce<I, E = DefaultError<I>, F = core::convert::Infallible> {
     type Output;
 
     fn parse_once(self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
-pub trait ParseMut<I, E = DefaultError<I>, F = E>: ParseOnce<I, E, F> {
+pub trait ParseMut<I, E = DefaultError<I>, F = core::convert::Infallible>: ParseOnce<I, E, F> {
     fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
-pub trait Parse<I, E = DefaultError<I>, F = E>: ParseMut<I, E, F> {
+pub trait Parse<I, E = DefaultError<I>, F = core::convert::Infallible>: ParseMut<I, E, F> {
     fn parse(&self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
