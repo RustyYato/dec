@@ -23,12 +23,15 @@ mod ext;
 pub mod indexed;
 #[forbid(unsafe_code)]
 mod iter;
+#[forbid(unsafe_code)]
+mod iter_input;
 #[allow(unsafe_code)]
 mod tag;
 
 pub use context::{AppendError, Context};
 use error::CaptureInput;
 pub use ext::{Mut, Ref};
+pub use iter_input::IterInput;
 pub use tag::{AnyOf, NoneOf};
 
 impl<T: ?Sized> ParseExt for T {}
