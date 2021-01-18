@@ -3,18 +3,18 @@ use crate::{
     ParseMut,
 };
 
-enum IterState<I, E> {
+enum IterState<I, E, F> {
     Input(I),
-    Error(Error<E>),
+    Error(Error<E, F>),
     Empty,
 }
 
-pub struct Iter<P, I, E> {
+pub struct Iter<P, I, E, F> {
     parser: P,
-    state: IterState<I, E>,
+    state: IterState<I, E, F>,
 }
 
-impl<I, E> IterState<I, E> {
+impl<I, E, F> IterState<I, E, F> {
     fn take(&mut self) -> Option<I> {
         match core::mem::replace(self, IterState::Empty) {
             IterState::Input(input) => Some(input),
@@ -26,7 +26,7 @@ impl<I, E> IterState<I, E> {
         }
     }
 
-    fn into(self) -> PResult<I, (), E> {
+    fn into(self) -> PResult<I, (), E, F> {
         match self {
             IterState::Input(input) => Ok((input, ())),
             IterState::Error(err) => Err(err),
@@ -35,7 +35,7 @@ impl<I, E> IterState<I, E> {
     }
 }
 
-impl<P, I, E> Iter<P, I, E> {
+impl<P, I, E, F> Iter<P, I, E, F> {
     pub(crate) fn new(parser: P, input: I) -> Self {
         Self {
             parser,
@@ -43,11 +43,11 @@ impl<P, I, E> Iter<P, I, E> {
         }
     }
 
-    pub fn finish(self) -> PResult<I, (), E> { self.state.into() }
+    pub fn finish(self) -> PResult<I, (), E, F> { self.state.into() }
 }
 
-impl<P: ParseMut<I, E>, I, E: ParseError<I>> core::iter::FusedIterator for &mut Iter<P, I, E> {}
-impl<P: ParseMut<I, E>, I, E: ParseError<I>> Iterator for &mut Iter<P, I, E> {
+impl<P: ParseMut<I, E, F>, I, E: ParseError<I>, F> core::iter::FusedIterator for &mut Iter<P, I, E, F> {}
+impl<P: ParseMut<I, E, F>, I, E: ParseError<I>, F> Iterator for &mut Iter<P, I, E, F> {
     type Item = P::Output;
 
     fn next(&mut self) -> Option<Self::Item> {

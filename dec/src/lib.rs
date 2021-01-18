@@ -1,8 +1,8 @@
 #![cfg_attr(feature = "nightly", feature(unsized_locals, try_trait))]
 #![forbid(unsafe_code)]
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(all(not(test), feature = "alloc"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc as std;
 
 use imp::*;
@@ -52,7 +52,6 @@ pub mod branch {
     pub fn par_any<P>(tuple: P) -> ParAny<P> { ParAny(tuple) }
 }
 
-#[forbid(unsafe_code)]
 pub mod seq {
     use crate::*;
 
@@ -77,9 +76,9 @@ pub mod seq {
     pub fn mid<A, B, C>(first: A, second: B, third: C) -> Mid<A, B, C> { Mid(first, second, third) }
 
     #[cfg(feature = "alloc")]
-    pub fn until<O, S, P>(stop: S, parser: P) -> Until<P, S, impl Fn() -> Vec<O> + Copy> {
+    pub fn until<O, S, P>(stop: S, parser: P) -> Until<P, S, impl Fn() -> std::vec::Vec<O> + Copy> {
         Until {
-            collection: Vec::new,
+            collection: std::vec::Vec::new,
             parser,
             stop,
         }
@@ -94,29 +93,32 @@ pub mod seq {
     }
 
     #[cfg(feature = "alloc")]
-    pub fn many0<P, O>(parser: P) -> Range<P, RangeFull, impl Copy + Fn() -> Vec<O>> {
+    pub fn many0<P, O>(parser: P) -> Range<P, RangeFull, impl Copy + Fn() -> std::vec::Vec<O>> {
         Range {
             parser,
             range: ..,
-            collection: Vec::new,
+            collection: std::vec::Vec::new,
         }
     }
 
     #[cfg(feature = "alloc")]
-    pub fn many1<P, O>(parser: P) -> Range<P, RangeFrom<usize>, impl Copy + Fn() -> Vec<O>> {
+    pub fn many1<P, O>(parser: P) -> Range<P, RangeFrom<usize>, impl Copy + Fn() -> std::vec::Vec<O>> {
         Range {
             parser,
             range: 1..,
-            collection: Vec::new,
+            collection: std::vec::Vec::new,
         }
     }
 
     #[cfg(feature = "alloc")]
-    pub fn range<P, O, R: RangeBounds<usize>>(range: R, parser: P) -> Range<P, R, impl Copy + Fn() -> Vec<O>> {
+    pub fn range<P, O, R: RangeBounds<usize>>(
+        range: R,
+        parser: P,
+    ) -> Range<P, R, impl Copy + Fn() -> std::vec::Vec<O>> {
         Range {
             range,
             parser,
-            collection: Vec::new,
+            collection: std::vec::Vec::new,
         }
     }
 
@@ -145,7 +147,6 @@ pub mod seq {
     }
 }
 
-#[forbid(unsafe_code)]
 pub mod map {
     use crate::*;
 
@@ -165,7 +166,6 @@ pub mod map {
     pub fn try_then<P, F>(parser: P, f: F) -> TryThen<P, F> { TryThen(parser, f) }
 }
 
-#[forbid(unsafe_code)]
 pub mod combinator {
     use crate::*;
 

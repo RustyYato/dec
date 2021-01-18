@@ -1,5 +1,5 @@
 use core::{ops::RangeBounds, option, slice};
-use std::{vec::Vec, vec};
+use std::{vec, vec::Vec};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Punctuated<V, P> {
@@ -132,7 +132,7 @@ impl<V, P> Punctuated<V, P> {
         P: Default,
     {
         if let Some(last) = self.last.as_mut() {
-            let value = std::mem::replace(last, value);
+            let value = core::mem::replace(last, value);
             self.inner.push((value, P::default()))
         } else {
             self.last = Some(value);
@@ -402,7 +402,7 @@ impl<V, P> DoubleEndedIterator for Iter<'_, V, P> {
     fn next_back(&mut self) -> Option<Self::Item> { self.inner.next_back().map(Pair::into_value) }
 }
 
-impl<V, P> std::iter::FromIterator<Pair<V, P>> for Punctuated<V, P> {
+impl<V, P> core::iter::FromIterator<Pair<V, P>> for Punctuated<V, P> {
     fn from_iter<I: IntoIterator<Item = Pair<V, P>>>(iter: I) -> Self {
         let mut punctuated = Self::new();
         punctuated.extend(iter.into_iter());
@@ -431,7 +431,7 @@ impl<V, P> Extend<Pair<V, P>> for Punctuated<V, P> {
     }
 }
 
-impl<V, P: Default> std::iter::FromIterator<V> for Punctuated<V, P> {
+impl<V, P: Default> core::iter::FromIterator<V> for Punctuated<V, P> {
     fn from_iter<I: IntoIterator<Item = V>>(iter: I) -> Self {
         let mut punctuated = Self::new();
         punctuated.extend(iter.into_iter());

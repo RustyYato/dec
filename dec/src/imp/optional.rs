@@ -7,14 +7,14 @@ use dec_core::{
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Opt<P>(pub P);
 
-impl<P, I, E> ParseOnce<I, E> for Opt<P>
+impl<P, I, E, Fail> ParseOnce<I, E, Fail> for Opt<P>
 where
-    P: ParseOnce<I, E>,
+    P: ParseOnce<I, E, Fail>,
     E: ParseError<I>,
 {
     type Output = Option<P::Output>;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         match self.0.parse_once(input) {
             Ok((input, output)) => Ok((input, Some(output))),
             Err(Error::Error(err)) => Ok((err.into_input(), None)),
@@ -23,18 +23,18 @@ where
     }
 }
 
-impl<P, I, E> ParseMut<I, E> for Opt<P>
+impl<P, I, E, Fail> ParseMut<I, E, Fail> for Opt<P>
 where
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Opt(self.0.by_mut()).parse_once(input) }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> { Opt(self.0.by_mut()).parse_once(input) }
 }
 
-impl<P, I, E> Parse<I, E> for Opt<P>
+impl<P, I, E, Fail> Parse<I, E, Fail> for Opt<P>
 where
-    P: Parse<I, E>,
+    P: Parse<I, E, Fail>,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> { Opt(self.0.by_ref()).parse_once(input) }
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> { Opt(self.0.by_ref()).parse_once(input) }
 }

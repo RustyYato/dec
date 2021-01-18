@@ -1,5 +1,5 @@
 pub type DefaultError<I> = (I, ErrorKind);
-pub type PResult<I, T, E = DefaultError<I>> = core::result::Result<(I, T), Error<E>>;
+pub type PResult<I, T, E = DefaultError<I>, F = E> = core::result::Result<(I, T), Error<E, F>>;
 
 #[cfg(feature = "alloc")]
 pub mod verbose;
@@ -8,12 +8,12 @@ pub mod verbose;
 pub struct CaptureInput<T>(pub T);
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Error<E> {
+pub enum Error<E, F = E> {
     Error(E),
-    Failure(E),
+    Failure(F),
 }
 
-impl<E> From<E> for Error<E> {
+impl<E, F> From<E> for Error<E, F> {
     fn from(err: E) -> Self { Self::Error(err) }
 }
 
@@ -49,14 +49,6 @@ pub trait ParseError<I>: Sized {
 
     fn into_input(self) -> I;
 }
-
-// impl<I> ParseError<I> for () {
-//     fn from_input_kind(_: I, _: ErrorKind) -> Self {}
-
-//     fn append(self, _: I, _: ErrorKind) -> Self { self }
-
-//     fn or(self, _: Self) -> Self { self }
-// }
 
 impl<I> ParseError<I> for core::convert::Infallible {
     fn from_input_kind(_: I, kind: ErrorKind) -> Self {

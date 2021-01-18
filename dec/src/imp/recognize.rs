@@ -7,15 +7,15 @@ use dec_core::{
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Recognize<P>(pub P);
 
-impl<P, I, E> ParseOnce<I, E> for Recognize<P>
+impl<P, I, E, Fail> ParseOnce<I, E, Fail> for Recognize<P>
 where
-    P: ParseOnce<I, E>,
+    P: ParseOnce<I, E, Fail>,
     I: Clone + InputSplit,
     E: ParseError<I>,
 {
     type Output = (I, P::Output);
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let old_input = input.clone();
         let len = input.len();
         let (input, output) = self.0.parse_once(input)?;
@@ -25,24 +25,24 @@ where
     }
 }
 
-impl<P, I, E> ParseMut<I, E> for Recognize<P>
+impl<P, I, E, Fail> ParseMut<I, E, Fail> for Recognize<P>
 where
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     I: Clone + InputSplit,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { Recognize(self.0.by_mut()).parse_once(input) }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> { Recognize(self.0.by_mut()).parse_once(input) }
 }
 
-impl<P, I, E> Parse<I, E> for Recognize<P>
+impl<P, I, E, Fail> Parse<I, E, Fail> for Recognize<P>
 where
-    P: Parse<I, E>,
+    P: Parse<I, E, Fail>,
     I: Clone + InputSplit,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E>
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail>
     where
-        P: Parse<I, E>,
+        P: Parse<I, E, Fail>,
         I: Clone + InputSplit,
         E: ParseError<I>,
     {

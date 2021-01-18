@@ -76,18 +76,15 @@ impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
 impl<I: InputSplit, P: Pos, T: Tag<I>> ParseTag<T> for Indexed<I, P> {
     type Output = T::Output;
 
-    fn parse_tag(mut self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>> {
+    fn parse_tag(mut self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible> {
         let len = self.inner.len();
-        
+
         match tag.parse_tag(self.inner) {
             Err(Error::Error(CaptureInput(input))) => {
                 self.inner = input;
                 Err(Error::Error(CaptureInput(self)))
             }
-            Err(Error::Failure(CaptureInput(input))) => {
-                self.inner = input;
-                Err(Error::Failure(CaptureInput(self)))
-            }
+            Err(Error::Failure(infallible)) => match infallible {},
             Ok((input, value)) => {
                 self.inner = input;
                 let lexeme_len = len - self.inner.len();

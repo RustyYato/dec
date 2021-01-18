@@ -1,17 +1,17 @@
 use super::*;
 
-impl<I, E, P, S, Fp, Fs, MkA, A, E2> ParseOnce<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, E2, Fail> ParseOnce<I, E, Fail> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     Fp: FnMut(A, P::Output) -> Result<A, E2>,
     Fs: FnMut(A, S::Output) -> Result<A, E2>,
     MkA: FnOnce() -> A,
+    E: ParseError<I>,
 {
     type Output = Result<A, E2>;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -23,16 +23,16 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A, E2> ParseMut<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, E2, Fail> ParseMut<I, E, Fail> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     Fp: FnMut(A, P::Output) -> Result<A, E2>,
     Fs: FnMut(A, S::Output) -> Result<A, E2>,
     MkA: FnMut() -> A,
+    E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -44,16 +44,16 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A, E2> Parse<I, E> for TrySeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, E2, Fail> Parse<I, E, Fail> for TrySeparatedFold<P, S, Fp, Fs, MkA>
 where
-    E: ParseError<I>,
-    P: Parse<I, E>,
-    S: Parse<I, E>,
+    P: Parse<I, E, Fail>,
+    S: Parse<I, E, Fail>,
     Fp: Fn(A, P::Output) -> Result<A, E2>,
     Fs: Fn(A, S::Output) -> Result<A, E2>,
     MkA: Fn() -> A,
+    E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,

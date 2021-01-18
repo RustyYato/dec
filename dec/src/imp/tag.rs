@@ -9,34 +9,34 @@ pub fn tag<T>(tag: T) -> Tag<T> { Tag(tag) }
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Tag<T>(pub T);
 
-impl<T, I, E> ParseOnce<I, E> for Tag<T>
+impl<T, I, E, Fail> ParseOnce<I, E, Fail> for Tag<T>
 where
     T: dec_core::Tag<I>,
     E: ParseError<I>,
 {
     type Output = T::Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> { self.parse(input) }
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> { self.parse(input) }
 }
 
-impl<T, I, E> ParseMut<I, E> for Tag<T>
+impl<T, I, E, Fail> ParseMut<I, E, Fail> for Tag<T>
 where
     T: dec_core::Tag<I>,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> { self.parse(input) }
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> { self.parse(input) }
 }
 
-impl<T, I, E> Parse<I, E> for Tag<T>
+impl<T, I, E, Fail> Parse<I, E, Fail> for Tag<T>
 where
     T: dec_core::Tag<I>,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         match self.0.parse_tag(input) {
             Ok(value) => Ok(value),
             Err(Error::Error(CaptureInput(input))) => Err(Error::Error(E::from_input_kind(input, ErrorKind::Tag))),
-            Err(Error::Failure(CaptureInput(input))) => Err(Error::Failure(E::from_input_kind(input, ErrorKind::Tag))),
+            Err(Error::Failure(inf)) => match inf {},
         }
     }
 }
@@ -83,11 +83,11 @@ mod test {
         );
 
         assert_eq!(
-            ParseOnce::parse_once(Tag('h'), "byehi"),
+            ParseOnce::<_>::parse_once(Tag('h'), "byehi"),
             Err(Error::Error(("byehi", ErrorKind::Tag)))
         );
         assert_eq!(
-            ParseOnce::parse_once(Tag('😃'), "hibye😃".as_bytes()),
+            ParseOnce::<_>::parse_once(Tag('😃'), "hibye😃".as_bytes()),
             Err(Error::Error(("hibye😃".as_bytes(), ErrorKind::Tag)))
         );
     }

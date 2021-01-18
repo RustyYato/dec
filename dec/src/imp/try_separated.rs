@@ -35,18 +35,18 @@ pub struct TrySeparatedFold<P, S, Fp, Fs, A> {
     pub mk_acc: A,
 }
 
-fn try_separated_fold_parse_once<I, E, E2, P, S, Fp, Fs, A>(
+fn try_separated_fold_parse_once<I, E, E2, P, S, Fp, Fs, A, Fail>(
     input: I,
     mut item: P,
     mut sep: S,
     mut item_func: Fp,
     mut sep_func: Fs,
     acc: A,
-) -> PResult<I, Result<A, E2>, E>
+) -> PResult<I, Result<A, E2>, E, Fail>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     Fp: FnMut(A, P::Output) -> Result<A, E2>,
     Fs: FnMut(A, S::Output) -> Result<A, E2>,
 {

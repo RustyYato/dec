@@ -12,12 +12,12 @@ pub fn separated<O, P, S, R: RangeBounds<usize>>(
     range: R,
     sep: S,
     item: P,
-) -> SeparatedRange<P, S, R, impl Copy + Fn() -> Vec<O>> {
+) -> SeparatedRange<P, S, R, impl Copy + Fn() -> std::vec::Vec<O>> {
     SeparatedRange {
         range,
         sep,
         item,
-        mk_collection: Vec::new,
+        mk_collection: std::vec::Vec::new,
     }
 }
 
@@ -64,18 +64,18 @@ pub struct SeparatedRange<P, S, R, MkC> {
     pub mk_collection: MkC,
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A> ParseOnce<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, Fail> ParseOnce<I, E, Fail> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
     E: ParseError<I>,
-    S: ParseMut<I, E>,
-    P: ParseMut<I, E>,
+    S: ParseMut<I, E, Fail>,
+    P: ParseMut<I, E, Fail>,
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
     MkA: FnOnce() -> A,
 {
     type Output = A;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -96,16 +96,16 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A> ParseMut<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, Fail> ParseMut<I, E, Fail> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
     E: ParseError<I>,
-    S: ParseMut<I, E>,
-    P: ParseMut<I, E>,
+    S: ParseMut<I, E, Fail>,
+    P: ParseMut<I, E, Fail>,
     Fs: FnMut(A, S::Output) -> A,
     Fp: FnMut(A, P::Output) -> A,
     MkA: FnMut() -> A,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -125,16 +125,16 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A> Parse<I, E> for SeparatedFold<P, S, Fp, Fs, MkA>
+impl<I, E, P, S, Fp, Fs, MkA, A, Fail> Parse<I, E, Fail> for SeparatedFold<P, S, Fp, Fs, MkA>
 where
     E: ParseError<I>,
-    S: Parse<I, E>,
-    P: Parse<I, E>,
+    S: Parse<I, E, Fail>,
+    P: Parse<I, E, Fail>,
     Fs: Fn(A, S::Output) -> A,
     Fp: Fn(A, P::Output) -> A,
     MkA: Fn() -> A,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -154,11 +154,11 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseOnce<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
+impl<I, E, P, S, Fp, Fs, MkA, A, R, Fail> ParseOnce<I, E, Fail> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     Fp: FnMut(A, P::Output) -> A,
     Fs: FnMut(A, S::Output) -> A,
     MkA: FnOnce() -> A,
@@ -166,7 +166,7 @@ where
 {
     type Output = A;
 
-    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             mut item,
             mut sep,
@@ -220,17 +220,17 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A, R> ParseMut<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
+impl<I, E, P, S, Fp, Fs, MkA, A, R, Fail> ParseMut<I, E, Fail> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     Fp: FnMut(A, P::Output) -> A,
     Fs: FnMut(A, S::Output) -> A,
     MkA: FnMut() -> A,
     R: RangeBounds<usize> + Clone,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -252,17 +252,17 @@ where
     }
 }
 
-impl<I, E, P, S, Fp, Fs, MkA, A, R> Parse<I, E> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
+impl<I, E, P, S, Fp, Fs, MkA, A, R, Fail> Parse<I, E, Fail> for SeparatedFoldRange<P, S, Fp, Fs, MkA, R>
 where
     E: ParseError<I>,
-    P: Parse<I, E>,
-    S: Parse<I, E>,
+    P: Parse<I, E, Fail>,
+    S: Parse<I, E, Fail>,
     Fp: Fn(A, P::Output) -> A,
     Fs: Fn(A, S::Output) -> A,
     MkA: Fn() -> A,
     R: RangeBounds<usize> + Clone,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -284,18 +284,18 @@ where
     }
 }
 
-impl<I, E, P, S, R, MkC, C> ParseOnce<I, E> for SeparatedRange<P, S, R, MkC>
+impl<I, E, P, S, R, MkC, C, Fail> ParseOnce<I, E, Fail> for SeparatedRange<P, S, R, MkC>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     R: RangeBounds<usize>,
     MkC: FnOnce() -> C,
     C: Extend<P::Output>,
 {
     type Output = C;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -315,16 +315,16 @@ where
     }
 }
 
-impl<I, E, P, S, R, MkC, C> ParseMut<I, E> for SeparatedRange<P, S, R, MkC>
+impl<I, E, P, S, R, MkC, C, Fail> ParseMut<I, E, Fail> for SeparatedRange<P, S, R, MkC>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
-    S: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
+    S: ParseMut<I, E, Fail>,
     R: RangeBounds<usize> + Clone,
     MkC: FnMut() -> C,
     C: Extend<P::Output>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,
@@ -342,16 +342,16 @@ where
     }
 }
 
-impl<I, E, P, S, R, MkC, C> Parse<I, E> for SeparatedRange<P, S, R, MkC>
+impl<I, E, P, S, R, MkC, C, Fail> Parse<I, E, Fail> for SeparatedRange<P, S, R, MkC>
 where
     E: ParseError<I>,
-    P: Parse<I, E>,
-    S: Parse<I, E>,
+    P: Parse<I, E, Fail>,
+    S: Parse<I, E, Fail>,
     R: RangeBounds<usize> + Clone,
     MkC: Fn() -> C,
     C: Extend<P::Output>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             item,
             sep,

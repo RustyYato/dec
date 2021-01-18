@@ -24,16 +24,16 @@ pub struct TryFold<P, A, F> {
     pub func: F,
 }
 
-fn try_fold_parse_once<P, A, F, I, E, E2>(
+fn try_fold_parse_once<P, A, F, I, E, Fail, E2>(
     mut parser: P,
     mut acc: A,
     mut func: F,
     mut input: I,
-) -> PResult<I, Result<A, E2>, E>
+) -> PResult<I, Result<A, E2>, E, Fail>
 where
-    P: ParseMut<I, E>,
-    F: FnMut(A, P::Output) -> Result<A, E2>,
+    P: ParseMut<I, E, Fail>,
     E: ParseError<I>,
+    F: FnMut(A, P::Output) -> Result<A, E2>,
 {
     loop {
         break match parser.parse_mut(input) {

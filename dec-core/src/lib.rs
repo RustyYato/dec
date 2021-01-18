@@ -5,7 +5,7 @@
 extern crate alloc as std;
 
 use crate::{
-    error::{DefaultError, PResult, ParseError},
+    error::{DefaultError, PResult},
     iter::Iter,
 };
 
@@ -51,7 +51,7 @@ pub trait ParseExt {
 
     fn by_ref(&self) -> crate::ext::Ref<Self> { crate::ext::Ref(self) }
 
-    fn piter<I, E>(self, input: I) -> Iter<Self, I, E>
+    fn piter<I, E, F>(self, input: I) -> Iter<Self, I, E, F>
     where
         Self: Sized,
     {
@@ -86,36 +86,38 @@ pub trait ParseExt {
     }
 }
 
-pub trait ParseOnce<I, E: ParseError<I> = DefaultError<I>> {
+pub trait ParseOnce<I, E = DefaultError<I>, F = E> {
     type Output;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E>;
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
-pub trait ParseMut<I, E: ParseError<I> = DefaultError<I>>: ParseOnce<I, E> {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E>;
+pub trait ParseMut<I, E = DefaultError<I>, F = E>: ParseOnce<I, E, F> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
-pub trait Parse<I, E: ParseError<I> = DefaultError<I>>: ParseMut<I, E> {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E>;
+pub trait Parse<I, E = DefaultError<I>, F = E>: ParseMut<I, E, F> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, F>;
 }
 
 pub trait ParseTag<T>: Sized {
     type Output;
 
-    fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>>;
+    fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible>;
 }
 
 pub trait Tag<I> {
     type Output;
 
-    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>>;
+    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>, core::convert::Infallible>;
 }
 
 impl<I: ParseTag<T>, T> Tag<I> for T {
     type Output = I::Output;
 
-    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>> { input.parse_tag(self) }
+    fn parse_tag(&self, input: I) -> PResult<I, Self::Output, CaptureInput<I>, core::convert::Infallible> {
+        input.parse_tag(self)
+    }
 }
 
 pub trait InputEq {

@@ -60,16 +60,16 @@ pub struct FoldRange<P, A, F, R> {
     pub range: R,
 }
 
-impl<P, MkA, A, F, I, E> ParseOnce<I, E> for Fold<P, MkA, F>
+impl<P, MkA, A, F, I, E, Fail> ParseOnce<I, E, Fail> for Fold<P, MkA, F>
 where
     MkA: FnOnce() -> A,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     F: FnMut(A, P::Output) -> A,
     E: ParseError<I>,
 {
     type Output = A;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self { parser, mk_acc, func } = self;
 
         TryFold {
@@ -82,14 +82,14 @@ where
     }
 }
 
-impl<P, MkA, A, F, I, E> ParseMut<I, E> for Fold<P, MkA, F>
+impl<P, MkA, A, F, I, E, Fail> ParseMut<I, E, Fail> for Fold<P, MkA, F>
 where
     MkA: FnMut() -> A,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     F: FnMut(A, P::Output) -> A,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self { parser, mk_acc, func } = self;
 
         Fold {
@@ -101,14 +101,14 @@ where
     }
 }
 
-impl<P, MkA, A, F, I, E> Parse<I, E> for Fold<P, MkA, F>
+impl<P, MkA, A, F, I, E, Fail> Parse<I, E, Fail> for Fold<P, MkA, F>
 where
     MkA: Fn() -> A,
-    P: Parse<I, E>,
+    P: Parse<I, E, Fail>,
     F: Fn(A, P::Output) -> A,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self { parser, mk_acc, func } = self;
 
         Fold {
@@ -120,17 +120,17 @@ where
     }
 }
 
-impl<R, P, A, MkA, F, I, E> ParseOnce<I, E> for FoldRange<P, MkA, F, R>
+impl<R, P, A, MkA, F, I, E, Fail> ParseOnce<I, E, Fail> for FoldRange<P, MkA, F, R>
 where
     R: RangeBounds<usize>,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     MkA: FnOnce() -> A,
     F: FnMut(A, P::Output) -> A,
     E: ParseError<I>,
 {
     type Output = A;
 
-    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, mut input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             mut parser,
             mk_acc,
@@ -178,15 +178,15 @@ where
     }
 }
 
-impl<R, P, MkA, A, F, I, E> ParseMut<I, E> for FoldRange<P, MkA, F, R>
+impl<R, P, MkA, A, F, I, E, Fail> ParseMut<I, E, Fail> for FoldRange<P, MkA, F, R>
 where
     R: RangeBounds<usize> + Clone,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     MkA: FnMut() -> A,
     F: FnMut(A, P::Output) -> A,
     E: ParseError<I>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             parser,
             mk_acc,
@@ -204,15 +204,15 @@ where
     }
 }
 
-impl<R, P, MkA, A, F, I, E> Parse<I, E> for FoldRange<P, MkA, F, R>
+impl<R, P, MkA, A, F, I, E, Fail> Parse<I, E, Fail> for FoldRange<P, MkA, F, R>
 where
     R: RangeBounds<usize> + Clone,
-    P: Parse<I, E>,
+    P: Parse<I, E, Fail>,
     MkA: Fn() -> A,
     F: Fn(A, P::Output) -> A,
     E: ParseError<I>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             parser,
             mk_acc,
@@ -238,17 +238,17 @@ pub struct Range<P, R, MkC> {
     pub collection: MkC,
 }
 
-impl<I, E, P, R, MkC, C> ParseOnce<I, E> for Range<P, R, MkC>
+impl<I, E, P, R, MkC, C, Fail> ParseOnce<I, E, Fail> for Range<P, R, MkC>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     R: RangeBounds<usize>,
     MkC: FnOnce() -> C,
     C: Extend<P::Output>,
 {
     type Output = C;
 
-    fn parse_once(self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_once(self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             range,
             parser,
@@ -264,15 +264,15 @@ where
     }
 }
 
-impl<I, E, P, R, MkC, C> ParseMut<I, E> for Range<P, R, MkC>
+impl<I, E, P, R, MkC, C, Fail> ParseMut<I, E, Fail> for Range<P, R, MkC>
 where
     E: ParseError<I>,
-    P: ParseMut<I, E>,
+    P: ParseMut<I, E, Fail>,
     R: RangeBounds<usize> + Clone,
     MkC: FnMut() -> C,
     C: Extend<P::Output>,
 {
-    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse_mut(&mut self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             range,
             parser,
@@ -287,15 +287,15 @@ where
     }
 }
 
-impl<I, E, P, R, MkC, C> Parse<I, E> for Range<P, R, MkC>
+impl<I, E, P, R, MkC, C, Fail> Parse<I, E, Fail> for Range<P, R, MkC>
 where
     E: ParseError<I>,
-    P: Parse<I, E>,
+    P: Parse<I, E, Fail>,
     R: RangeBounds<usize> + Clone,
     MkC: Fn() -> C,
     C: Extend<P::Output>,
 {
-    fn parse(&self, input: I) -> PResult<I, Self::Output, E> {
+    fn parse(&self, input: I) -> PResult<I, Self::Output, E, Fail> {
         let Self {
             range,
             parser,
@@ -312,12 +312,16 @@ where
 
 #[cfg(all(test, feature = "alloc"))]
 mod test {
+    use dec_core::error::CaptureInput;
+
     use super::*;
 
     use crate::{seq::range, tag::tag};
 
+    use std::{string::String, vec};
+
     #[test]
-    fn foo() -> Result<(), Error<()>> {
+    fn foo() -> Result<(), Error<CaptureInput<&'static str>, core::convert::Infallible>> {
         let parser = FoldRange {
             parser: tag("."),
             mk_acc: || 0,
@@ -355,7 +359,7 @@ mod test {
             range: 2..,
         };
 
-        let _: Error<()> = parser.parse(".").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse(".").unwrap_err();
 
         let (input, value) = parser.parse("..")?;
         assert_eq!(input, "");
@@ -372,7 +376,7 @@ mod test {
             range: 2..=4,
         };
 
-        let _: Error<()> = parser.parse(".").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse(".").unwrap_err();
 
         let (input, value) = parser.parse("..")?;
         assert_eq!(input, "");
@@ -393,10 +397,10 @@ mod test {
             range: 4..=4,
         };
 
-        let _: Error<()> = parser.parse(".").unwrap_err();
-        let _: Error<()> = parser.parse("").unwrap_err();
-        let _: Error<()> = parser.parse("..").unwrap_err();
-        let _: Error<()> = parser.parse("...").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse(".").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse("").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse("..").unwrap_err();
+        let _: Error<CaptureInput<_>> = parser.parse("...").unwrap_err();
 
         let (input, value) = parser.parse("....")?;
         assert_eq!(input, "");
@@ -413,7 +417,7 @@ mod test {
     #[should_panic(expected = "malformed range")]
     fn invalid_range() {
         #[allow(clippy::reversed_empty_ranges)]
-        let _: PResult<_, _, ()> = FoldRange {
+        let _: PResult<_, _, CaptureInput<_>> = FoldRange {
             parser: tag("."),
             mk_acc: || 0,
             func: |acc, _| acc + 1,
@@ -425,27 +429,27 @@ mod test {
     #[test]
     fn test_range() {
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(.., tag('.')), "...input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(range(.., tag('.')), "...input"),
             Ok(("input", vec!["."; 3]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), "...input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(range(..2, tag('.')), "...input"),
             Ok(("..input", vec!["."; 1]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..=2, tag('.')), "...input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(range(..=2, tag('.')), "...input"),
             Ok((".input", vec!["."; 2]))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(..2, tag('.')), ".input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(range(..2, tag('.')), ".input"),
             Ok(("input", vec!["."; 1]))
         );
         assert_eq!(
-            ParseOnce::parse_once(range(2.., tag('.')), ".input"),
+            ParseOnce::<_>::parse_once(range(2.., tag('.')), ".input"),
             Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(range(2.., tag('.')), "..input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(range(2.., tag('.')), "..input"),
             Ok(("input", vec!["."; 2]))
         );
 
@@ -455,23 +459,23 @@ mod test {
             collection: String::new,
         };
         assert_eq!(
-            ParseOnce::parse_once(parser.by_ref(), "input"),
+            ParseOnce::<_>::parse_once(parser.by_ref(), "input"),
             Err(Error::Error(("input", ErrorKind::RangeStart)))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(parser.by_ref(), ".input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(parser.by_ref(), ".input"),
             Ok(("input", ".".to_string()))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "..input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(parser.by_ref(), "..input"),
             Ok(("input", "..".to_string()))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "...input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(parser.by_ref(), "...input"),
             Ok(("input", "...".to_string()))
         );
         assert_eq!(
-            ParseOnce::<_, ()>::parse_once(parser.by_ref(), "....input"),
+            ParseOnce::<_, CaptureInput<&str>>::parse_once(parser.by_ref(), "....input"),
             Ok((".input", "...".to_string()))
         );
     }
