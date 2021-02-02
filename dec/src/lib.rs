@@ -9,11 +9,14 @@ use imp::*;
 
 extern crate core;
 
+pub use dec_core as base;
+
 mod imp {
     pub mod tag;
 
     pub(crate) mod all;
     pub(crate) mod any;
+    pub(crate) mod any_set;
     pub(crate) mod fold;
     pub(crate) mod lift;
     pub(crate) mod map;
@@ -44,10 +47,12 @@ pub mod branch {
     use crate::*;
 
     pub use any::Any;
+    pub use any_set::AnySet;
     #[cfg(all(feature = "rayon", feature = "std"))]
     pub use par_any::ParAny;
 
     pub fn any<P>(tuple: P) -> Any<P> { Any(tuple) }
+    pub fn any_set<P>(tuple: P) -> AnySet<P> { AnySet(tuple) }
     #[cfg(all(feature = "rayon", feature = "std"))]
     pub fn par_any<P>(tuple: P) -> ParAny<P> { ParAny(tuple) }
 }
@@ -173,7 +178,10 @@ pub mod combinator {
     pub use not::Not;
     pub use optional::Opt;
     pub use recognize::Recognize;
+    pub use skip::Skip;
     pub use verify::Verify;
+
+    pub fn skip(len: usize) -> Skip { Skip(len) }
 
     pub fn lift<P>(parser: P) -> Lift<P> { Lift(parser) }
 

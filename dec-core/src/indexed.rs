@@ -60,6 +60,12 @@ impl<I, P: Pos> Indexed<I, P> {
     pub fn inner(&self) -> &I { &self.inner }
 }
 
+impl<I: InputSplit, P> Indexed<I, P> {
+    pub fn len(&self) -> usize { self.inner.len() }
+
+    pub fn is_empty(&self) -> bool { self.inner.is_empty() }
+}
+
 impl<I: InputSplit, P: Pos> Spanned<P> for Indexed<I, P> {
     fn span(&self) -> Span<P> {
         Span {
