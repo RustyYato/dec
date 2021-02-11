@@ -105,6 +105,7 @@ impl<I: InputSplit, P: Pos, T: Tag<I>> ParseTag<T> for Indexed<I, P> {
 macro_rules! imp_pos {
     ($($type:ty),*) => {$(
         impl Pos for $type {
+            #[inline]
             fn add(self, inc: usize) -> Self {
                 #[cfg(debug_assertions)]
                 use core::convert::TryFrom;

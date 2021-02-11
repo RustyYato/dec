@@ -138,10 +138,13 @@ pub trait InputSplit: Sized {
 }
 
 impl<T> InputSplit for &[T] {
+    #[inline]
     fn len(&self) -> usize { (**self).len() }
 
+    #[inline]
     fn cut(self, at: usize) -> Self { &self[..at] }
 
+    #[inline]
     fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         match self.get(at..) {
             Some(x) => Ok(x),
@@ -151,10 +154,13 @@ impl<T> InputSplit for &[T] {
 }
 
 impl InputSplit for &str {
+    #[inline]
     fn len(&self) -> usize { (**self).len() }
 
+    #[inline]
     fn cut(self, at: usize) -> Self { &self[..at] }
 
+    #[inline]
     fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         match self.get(at..) {
             Some(x) => Ok(x),
@@ -164,10 +170,13 @@ impl InputSplit for &str {
 }
 
 impl<T> InputSplit for &mut [T] {
+    #[inline]
     fn len(&self) -> usize { (**self).len() }
 
+    #[inline]
     fn cut(self, at: usize) -> Self { &mut self[..at] }
 
+    #[inline]
     fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         if self.len() >= at {
             Ok(&mut self[at..])
@@ -178,10 +187,13 @@ impl<T> InputSplit for &mut [T] {
 }
 
 impl InputSplit for &mut str {
+    #[inline]
     fn len(&self) -> usize { (**self).len() }
 
+    #[inline]
     fn cut(self, at: usize) -> Self { &mut self[..at] }
 
+    #[inline]
     fn advance(self, at: usize) -> core::result::Result<Self, Self> {
         if self.len() >= at && self.is_char_boundary(at) {
             Ok(&mut self[at..])
@@ -192,6 +204,7 @@ impl InputSplit for &mut str {
 }
 
 impl<T> InputEq for &[T] {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         let s: &[T] = self;
         let o: &[T] = other;
@@ -201,6 +214,7 @@ impl<T> InputEq for &[T] {
 }
 
 impl InputEq for &str {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         let s: &str = self;
         let o: &str = other;
@@ -210,6 +224,7 @@ impl InputEq for &str {
 }
 
 impl<T> InputEq for &mut [T] {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         let s: &[T] = self;
         let o: &[T] = other;
@@ -219,6 +234,7 @@ impl<T> InputEq for &mut [T] {
 }
 
 impl InputEq for &mut str {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         let s: &str = self;
         let o: &str = other;

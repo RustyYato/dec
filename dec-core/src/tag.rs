@@ -34,6 +34,7 @@ trait StrSlice: Sized {
 }
 
 impl<'a, T> Slice for &'a [T] {
+    #[inline]
     unsafe fn split_at_unchecked(self, index: usize) -> (Self, Self) {
         let ptr = self.as_ptr();
         (
@@ -44,6 +45,7 @@ impl<'a, T> Slice for &'a [T] {
 }
 
 impl<'a, T> Slice for &'a mut [T] {
+    #[inline]
     unsafe fn split_at_unchecked(self, index: usize) -> (Self, Self) {
         let ptr = self.as_mut_ptr();
         (
@@ -56,6 +58,7 @@ impl<'a, T> Slice for &'a mut [T] {
 impl<'a, T> NormSlice for &'a [T] {
     type Item = &'a T;
 
+    #[inline]
     unsafe fn split_first_unchecked(self) -> (Self::Item, Self) {
         let (first, rest) = self.split_at_unchecked(1);
         (&*(first as *const [T] as *const T), rest)
@@ -65,6 +68,7 @@ impl<'a, T> NormSlice for &'a [T] {
 impl<'a, T> NormSlice for &'a mut [T] {
     type Item = &'a mut T;
 
+    #[inline]
     unsafe fn split_first_unchecked(self) -> (Self::Item, Self) {
         let (first, rest) = self.split_at_unchecked(1);
         (&mut *(first as *mut [T] as *mut T), rest)
@@ -72,6 +76,7 @@ impl<'a, T> NormSlice for &'a mut [T] {
 }
 
 impl<'a> Slice for &'a str {
+    #[inline]
     unsafe fn split_at_unchecked(self, index: usize) -> (Self, Self) {
         let ptr = self.as_ptr();
         (
@@ -82,6 +87,7 @@ impl<'a> Slice for &'a str {
 }
 
 impl<'a> Slice for &'a mut str {
+    #[inline]
     unsafe fn split_at_unchecked(self, index: usize) -> (Self, Self) {
         let ptr = self.as_mut_ptr();
         (
@@ -94,16 +100,20 @@ impl<'a> Slice for &'a mut str {
 impl<'a> StrSlice for &'a str {
     type Bytes = &'a [u8];
 
+    #[inline]
     unsafe fn to_bytes(self) -> Self::Bytes { self.as_bytes() }
 
+    #[inline]
     unsafe fn from_utf8_unchecked(bytes: Self::Bytes) -> Self { core::str::from_utf8_unchecked(bytes) }
 }
 
 impl<'a> StrSlice for &'a mut str {
     type Bytes = &'a mut [u8];
 
+    #[inline]
     unsafe fn to_bytes(self) -> Self::Bytes { self.as_bytes_mut() }
 
+    #[inline]
     unsafe fn from_utf8_unchecked(bytes: Self::Bytes) -> Self { core::str::from_utf8_unchecked_mut(bytes) }
 }
 
@@ -117,18 +127,21 @@ macro_rules! tag_impl {
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> ParseOnce<$Input, ErrorTy, FailureTy> for $Self {
             type Output = $Output;
 
+            #[inline]
             fn parse_once($self, $input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 $($body)*
             }
         }
 
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> ParseMut<$Input, ErrorTy, FailureTy> for $Self {
+            #[inline]
             fn parse_mut(&mut self, input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 self.parse_once(input)
             }
         }
 
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> Parse<$Input, ErrorTy, FailureTy> for $Self {
+            #[inline]
             fn parse(&self, input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 self.parse_once(input)
             }
@@ -136,6 +149,7 @@ macro_rules! tag_impl {
 
         impl<$($generics)*> Tag<$Input> for $Self {
             type Output = $Output;
+            #[inline]
             fn parse_tag(&self, input: $Input) -> PResult<$Input, Self::Output, CaptureInput<$Input>, core::convert::Infallible> {
                 self.parse_once(input)
             }
@@ -152,18 +166,21 @@ macro_rules! tag_impl {
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> ParseOnce<$Input, ErrorTy, FailureTy> for $Self {
             type Output = $Output;
 
+            #[inline]
             fn parse_once(self, input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 self.parse(input)
             }
         }
 
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> ParseMut<$Input, ErrorTy, FailureTy> for $Self {
+            #[inline]
             fn parse_mut(&mut self, input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 self.parse(input)
             }
         }
 
         impl<$($generics)*, ErrorTy: ParseError<$Input>, FailureTy> Parse<$Input, ErrorTy, FailureTy> for $Self {
+            #[inline]
             fn parse(&$self, $input: $Input) -> PResult<$Input, Self::Output, ErrorTy, FailureTy> {
                 $($body)*
             }
@@ -171,6 +188,7 @@ macro_rules! tag_impl {
 
         impl<$($generics)*> Tag<$Input> for $Self {
             type Output = $Output;
+            #[inline]
             fn parse_tag(&self, input: $Input) -> PResult<$Input, Self::Output, CaptureInput<$Input>, core::convert::Infallible> {
                 self.parse(input)
             }
@@ -203,6 +221,7 @@ macro_rules! tag {
 impl<'input, T: PartialEq> ParseTag<T> for &'input [T] {
     type Output = &'input T;
 
+    #[inline]
     fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible> {
         if self.get(0) == Some(tag) {
             let (matched, input) = unsafe { NormSlice::split_first_unchecked(self) };
@@ -216,6 +235,7 @@ impl<'input, T: PartialEq> ParseTag<T> for &'input [T] {
 impl<'input, T: PartialEq> ParseTag<T> for &'input mut [T] {
     type Output = &'input mut T;
 
+    #[inline]
     fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible> {
         if self.get(0) == Some(tag) {
             let (matched, input) = unsafe { NormSlice::split_first_unchecked(self) };
