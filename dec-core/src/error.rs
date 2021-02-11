@@ -25,6 +25,7 @@ pub enum ErrorKind {
     Not,
     Verify,
     RangeStart,
+    Capture,
     Pratt(PrattErrorKind),
     Custom(&'static str),
 }
@@ -47,7 +48,9 @@ pub trait ParseError<I>: Sized {
 
     fn or(self, other: Self) -> Self;
 
-    fn into_input(self) -> I;
+    fn into_input(self) -> I { self.into_input_kind().0 }
+
+    fn into_input_kind(self) -> (I, ErrorKind);
 }
 
 impl<I> ParseError<I> for core::convert::Infallible {
@@ -59,7 +62,7 @@ impl<I> ParseError<I> for core::convert::Infallible {
 
     fn or(self, _: Self) -> Self { self }
 
-    fn into_input(self) -> I { match self {} }
+    fn into_input_kind(self) -> (I, ErrorKind) { match self {} }
 }
 
 impl<I> ParseError<I> for (I, ErrorKind) {
@@ -69,7 +72,7 @@ impl<I> ParseError<I> for (I, ErrorKind) {
 
     fn or(self, _: Self) -> Self { self }
 
-    fn into_input(self) -> I { self.0 }
+    fn into_input_kind(self) -> (I, ErrorKind) { self }
 }
 
 impl<I> ParseError<I> for CaptureInput<I> {
@@ -79,5 +82,5 @@ impl<I> ParseError<I> for CaptureInput<I> {
 
     fn or(self, _: Self) -> Self { self }
 
-    fn into_input(self) -> I { self.0 }
+    fn into_input_kind(self) -> (I, ErrorKind) { (self.0, ErrorKind::Capture) }
 }

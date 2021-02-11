@@ -1,6 +1,6 @@
 use crate::{
-    error::{CaptureInput, Error, PResult},
-    InputEq, InputSplit, ParseTag, Tag,
+    error::{CaptureInput, Error, PResult, ParseError},
+    InputEq, InputSplit, ParseOnce, ParseTag, Tag,
 };
 
 use core::ops::Range as Span;
@@ -79,26 +79,35 @@ impl<I: Spanned<P>, T, P: Pos> Spanned<P> for (I, T) {
     fn span(&self) -> Span<P> { self.0.span() }
 }
 
+pub fn fix<I: InputSplit, P: Pos, Q: ParseOnce<I, F, T>, T, E: ParseError<Indexed<I, P>>, F: ParseError<I>>(
+    parser: Q,
+) -> impl ParseOnce<Indexed<I, P>, E, T, Output = Q::Output> {
+    move |input: Indexed<I, P>| {
+        let len = input.inner.len();
+        let pos = input.pos;
+        match parser.parse_once(input.inner) {
+            Err(Error::Failure(fail)) => Err(Error::Failure(fail)),
+            Err(Error::Error(err)) => {
+                let (input, kind) = err.into_input_kind();
+                let end = input.len();
+                let pos = pos.add(len - end);
+                Err(Error::Error(E::from_input_kind(Indexed { inner: input, pos }, kind)))
+            }
+            Ok((input, value)) => {
+                let lexeme_len = len - input.len();
+                let pos = pos.add(lexeme_len);
+
+                Ok((Indexed { inner: input, pos }, value))
+            }
+        }
+    }
+}
+
 impl<I: InputSplit, P: Pos, T: Tag<I>> ParseTag<T> for Indexed<I, P> {
     type Output = T::Output;
 
-    fn parse_tag(mut self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible> {
-        let len = self.inner.len();
-
-        match tag.parse_tag(self.inner) {
-            Err(Error::Error(CaptureInput(input))) => {
-                self.inner = input;
-                Err(Error::Error(CaptureInput(self)))
-            }
-            Err(Error::Failure(infallible)) => match infallible {},
-            Ok((input, value)) => {
-                self.inner = input;
-                let lexeme_len = len - self.inner.len();
-                self.pos = self.pos.add(lexeme_len);
-
-                Ok((self, value))
-            }
-        }
+    fn parse_tag(self, tag: &T) -> PResult<Self, Self::Output, CaptureInput<Self>, core::convert::Infallible> {
+        fix(move |input| tag.parse_tag(input)).parse_once(self)
     }
 }
 

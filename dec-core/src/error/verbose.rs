@@ -23,8 +23,6 @@ pub enum VerboseErrorItem<I> {
 pub enum VerboseErrorKind {
     /// static string added by the `context` function
     Context(&'static str),
-    /// indicates which character was expected by the `char` function
-    Char(char),
     /// error kind given by various nom parsers
     Kind(ErrorKind),
 }
@@ -123,19 +121,30 @@ impl<I: core::fmt::Debug> ParseError<I> for VerboseError<I> {
         self
     }
 
-    fn into_input(mut self) -> I {
+    fn into_input_kind(mut self) -> (I, ErrorKind) {
         let mut parent = match self.errors.pop_back().unwrap() {
-            VerboseErrorItem::Alt { parent } => parent,
-            VerboseErrorItem::Item { input, .. } => return input,
+            VerboseErrorItem::Item {
+                input,
+                kind: VerboseErrorKind::Kind(kind),
+                ..
+            } => return (input, kind),
+            VerboseErrorItem::Item { parent, .. } | VerboseErrorItem::Alt { parent } => parent,
         };
 
         while let Some(p) = parent {
             parent = match self.errors[p] {
-                VerboseErrorItem::Alt { parent } => parent,
-                VerboseErrorItem::Item { .. } => match self.errors.swap_remove_back(p) {
-                    Some(VerboseErrorItem::Item { input, .. }) => return input,
+                VerboseErrorItem::Item {
+                    kind: VerboseErrorKind::Kind(_),
+                    ..
+                } => match self.errors.swap_remove_back(p) {
+                    Some(VerboseErrorItem::Item {
+                        input,
+                        kind: VerboseErrorKind::Kind(kind),
+                        ..
+                    }) => return (input, kind),
                     _ => unreachable!(),
                 },
+                VerboseErrorItem::Item { parent, .. } | VerboseErrorItem::Alt { parent } => parent,
             };
         }
 
