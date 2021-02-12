@@ -97,9 +97,9 @@ pub struct Operator<Left, Op, Right> {
 
 use private::StackItem as RawSI;
 mod private {
-    pub struct StackItem<Bp, V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
+    pub struct StackItem<Bp, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
         pub(crate) min_bp: Bp,
-        pub(crate) recurse: super::Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo>,
+        pub(crate) recurse: super::Recurse<PO, IO, HBV, HFI, HMPr, HMI, HMPo>,
     }
 }
 
@@ -111,7 +111,6 @@ pub enum StackItem<Psi, E = ()> {
 #[allow(type_alias_bounds)]
 pub type PrattStackItem<I, E: ParseError<I>, F, P: Pratt<I, E, F>> = private::StackItem<
     <P as Pratt<I, E, F>>::BindingPower,
-    <P as Pratt<I, E, F>>::Value,
     <P as Pratt<I, E, F>>::PrefixOp,
     <P as Pratt<I, E, F>>::InfixOp,
     <P as Pratt<I, E, F>>::HookBuildValue,
@@ -121,11 +120,11 @@ pub type PrattStackItem<I, E: ParseError<I>, F, P: Pratt<I, E, F>> = private::St
     <P as Pratt<I, E, F>>::HookMergePostfix,
 >;
 
-enum Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
+enum Recurse<PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
     PrefixOp(PO),
-    InfixOp(IO, V),
+    InfixOp(IO),
     Value(HBV),
-    HookFinishInfix(HFI, V),
+    HookFinishInfix(HFI),
     HookMergePrefix(HMPr),
     HookMergeInfix(HMI),
     HookMergePostfix(HMPo),
@@ -134,7 +133,7 @@ enum Recurse<V, PO, IO, HBV, HFI, HMPr, HMI, HMPo> {
 pub type PrefixOp<P, I, E, F = core::convert::Infallible> =
     Operator<(), <P as Pratt<I, E, F>>::PrefixOp, <P as Pratt<I, E, F>>::Value>;
 pub type InfixOp<P, I, E, F = core::convert::Infallible> =
-    Operator<<P as Pratt<I, E, F>>::Value, <P as Pratt<I, E, F>>::InfixOp, <P as Pratt<I, E, F>>::Value>;
+    Operator<(), <P as Pratt<I, E, F>>::InfixOp, <P as Pratt<I, E, F>>::Value>;
 pub type PostfixOp<P, I, E, F = core::convert::Infallible> =
     Operator<<P as Pratt<I, E, F>>::Value, <P as Pratt<I, E, F>>::PostfixOp, ()>;
 
@@ -204,7 +203,7 @@ pub trait Pratt<I, E: ParseError<I>, F = core::convert::Infallible> {
 
     fn finish_infix_op(
         &mut self,
-        args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
+        args: Args<(Self::Value, Self::FastInfixOp), Self::HookFinishInfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         Err(Error(E::from_input_kind(
@@ -293,7 +292,7 @@ impl<I, E: ParseError<I>, F, P: Pratt<I, E, F> + ?Sized> Pratt<I, E, F> for &mut
 
     fn finish_infix_op(
         &mut self,
-        args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
+        args: Args<(Self::Value, Self::FastInfixOp), Self::HookFinishInfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         P::finish_infix_op(self, args, input)
@@ -370,7 +369,7 @@ impl<I, E: ParseError<I>, F, P: Pratt<I, E, F> + ?Sized> Pratt<I, E, F> for Box<
 
     fn finish_infix_op(
         &mut self,
-        args: Args<Self::FastInfixOp, Self::HookFinishInfix, Self::Value>,
+        args: Args<(Self::Value, Self::FastInfixOp), Self::HookFinishInfix, Self::Value>,
         input: I,
     ) -> PResult<I, Hook<Self::InfixOp, Self::HookFinishInfix, Self::BindingPower>, E, F> {
         P::finish_infix_op(self, args, input)
@@ -466,11 +465,11 @@ where
                 if infix.left < min_bp {
                     break
                 }
-                let (next_input, inf_op) = pratt.finish_infix_op(Args::Normal(infix.op), next_input)?;
+                let (next_input, inf_op) = pratt.finish_infix_op(Args::Normal((lhs, infix.op)), next_input)?;
                 let (next_input, inf_op) = unwrap(pratt, inf_op, next_input, P::finish_infix_op)?;
                 let (next_input, rhs) = recurse_pratt(pratt, next_input, infix.right)?;
                 let (next_input, value) =
-                    pratt.merge_infix_op(Args::Normal(Operator::infix_op(lhs, inf_op, rhs)), next_input)?;
+                    pratt.merge_infix_op(Args::Normal(Operator::prefix_op(inf_op, rhs)), next_input)?;
                 let (next_input, value) = unwrap(pratt, value, next_input, P::merge_infix_op)?;
                 input = next_input;
                 lhs = value;
@@ -607,17 +606,18 @@ where
                         }
                         Err(_) => match pratt.infix_op(input.clone()) {
                             Ok((next_input, infix)) if infix.left >= min_bp => {
-                                let (next_input, inf_op) = pratt.finish_infix_op(Args::Normal(infix.op), next_input)?;
+                                let (next_input, inf_op) =
+                                    pratt.finish_infix_op(Args::Normal((lhs, infix.op)), next_input)?;
 
                                 let old_min_bp = min_bp;
                                 let recurse = match inf_op {
                                     Hook::Complete(inf_op) => {
                                         min_bp = infix.right;
-                                        Recurse::InfixOp(inf_op, lhs)
+                                        Recurse::InfixOp(inf_op)
                                     }
                                     Hook::Recurse(bp, hook) => {
                                         min_bp = bp;
-                                        Recurse::HookFinishInfix(hook, lhs)
+                                        Recurse::HookFinishInfix(hook)
                                     }
                                 };
 
@@ -677,9 +677,9 @@ where
                             }
                         };
                     }
-                    Recurse::InfixOp(inf_op, left) => {
+                    Recurse::InfixOp(inf_op) => {
                         let (next_input, value) =
-                            pratt.merge_infix_op(Args::Normal(Operator::infix_op(left, inf_op, value)), input)?;
+                            pratt.merge_infix_op(Args::Normal(Operator::prefix_op(inf_op, value)), input)?;
                         input = next_input;
                         match value {
                             Hook::Complete(value) => lhs = value,
@@ -693,16 +693,16 @@ where
                             }
                         };
                     }
-                    Recurse::HookFinishInfix(hook, lhs) => {
+                    Recurse::HookFinishInfix(hook) => {
                         let (next_input, inf_op) = pratt.finish_infix_op(Args::Recurse(hook, value), input)?;
                         input = next_input;
 
                         let old_min_bp = min_bp;
                         let recurse = match inf_op {
-                            Hook::Complete(inf_op) => Recurse::InfixOp(inf_op, lhs),
+                            Hook::Complete(inf_op) => Recurse::InfixOp(inf_op),
                             Hook::Recurse(bp, hook) => {
                                 min_bp = bp;
-                                Recurse::HookFinishInfix(hook, lhs)
+                                Recurse::HookFinishInfix(hook)
                             }
                         };
 
